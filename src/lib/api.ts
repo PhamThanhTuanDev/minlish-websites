@@ -1,6 +1,7 @@
 import { LearningStats, VocabularySet, VocabularyWord } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL ?? '';
 
 // ============ Helper Functions ============
 
@@ -589,6 +590,16 @@ export interface Notification {
   createdAt: string;
 }
 
+function normalizeServerDateTime(raw: unknown): string {
+  const value = String(raw ?? '').trim();
+  if (!value) return '';
+
+  // Backend often returns LocalDateTime without offset, treat it as UTC for stable cross-timezone rendering.
+  const withZone = /[zZ]$|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`;
+  const date = new Date(withZone);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+}
+
 function mapApiNotification(n: any): Notification {
   const rawMsg = String(n.message ?? n.content ?? '').trim();
   const idx = rawMsg.indexOf('\n');
@@ -604,7 +615,7 @@ function mapApiNotification(n: any): Notification {
     title,
     content,
     isRead: Boolean(n.isRead ?? false),
-    createdAt: String(n.createdAt ?? ''),
+    createdAt: normalizeServerDateTime(n.createdAt),
   };
 }
 

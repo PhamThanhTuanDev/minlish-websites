@@ -273,7 +273,7 @@ export default function NotificationSettings() {
                     {item.content}
                   </p>
                   <p className="mt-3 text-xs text-muted-foreground/60">
-                    {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : ''}
+                    {item.createdAt ? new Date(item.createdAt).toLocaleString(undefined) : ''}
                   </p>
                 </div>
                 <Button 
