@@ -1,0 +1,250 @@
+import { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Plus, Trash2, BookOpen, ListChecks, Download, Edit } from 'lucide-react';
+import ImportWords from '@/components/ImportWords';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { VocabularyWord, createNewWord, VocabularySet } from '@/lib/types';
+import { addVocabularyToSet, deleteVocabulary, exportVocabularySet, getSet, importVocabularies, updateVocabulary } from '@/lib/api';
+import { toast } from 'sonner';
+
+// Dedupe by word only (case-insensitive, trimmed) to block "Apple" vs "apple".
+const normalizeKey = (word: string) => word.toLowerCase().trim();
+
+export default function SetDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [set, setSet] = useState<VocabularySet | null>(null);
+  const [open, setOpen] = useState(false);
+  const [editingWord, setEditingWord] = useState<VocabularyWord | null>(null);
+  const [form, setForm] = useState({
+    word: '', pronunciation: '', meaning: '', description: '',
+    example: '', collocation: '', relatedWords: '', note: '',
+  });
+
+  useEffect(() => {
+    (async () => {
+      if (!id) return;
+      const s = await getSet(id);
+      if (s) setSet(s);
+      else navigate('/sets');
+    })();
+  }, [id, navigate]);
+
+  if (!set) return null;
+
+  const resetForm = () => {
+    setForm({ word: '', pronunciation: '', meaning: '', description: '', example: '', collocation: '', relatedWords: '', note: '' });
+    setEditingWord(null);
+  };
+
+  const handleSave = async () => {
+    if (!set) return;
+    if (!form.word.trim() || !form.meaning.trim()) {
+      toast.error('Vui lòng nhập "Từ" và "Nghĩa".');
+      return;
+    }
+
+    const existingKeys = new Set(set.words.filter(w => w.id !== editingWord?.id).map(w => normalizeKey(w.word)));
+    const key = normalizeKey(form.word);
+    if (existingKeys.has(key)) {
+      toast.error('Từ này đã có trong bộ từ vựng của bạn.');
+      return;
+    }
+
+    const payload = {
+      ...form,
+      word: form.word.trim(),
+      meaning: form.meaning.trim(),
+    };
+
+    if (editingWord) {
+      await updateVocabulary(editingWord.id, payload);
+      toast.success('Đã cập nhật từ vựng.');
+    } else {
+      const word = createNewWord(payload);
+      await addVocabularyToSet(String(set.id), word);
+      toast.success('Đã thêm từ vựng mới.');
+    }
+
+    const refreshed = await getSet(String(set.id));
+    if (refreshed) setSet(refreshed);
+    resetForm();
+    setOpen(false);
+  };
+
+  const handleRemove = async (wordId: string) => {
+    if (!set) return;
+    await deleteVocabulary(wordId);
+    const refreshed = await getSet(String(set.id));
+    if (refreshed) setSet(refreshed);
+  };
+
+  const handleImport = async (words: VocabularyWord[]) => {
+    if (!set) return;
+    const updated = await importVocabularies(String(set.id), words);
+    setSet(updated);
+  };
+
+  const handleExport = async () => {
+    if (!set) return;
+    try {
+      await exportVocabularySet(String(set.id));
+      toast.success('Đã tải file CSV thành công');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Không thể export CSV';
+      toast.error(msg);
+    }
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
+      <div className="mb-6 flex items-center gap-3">
+        <Button asChild variant="outline" size="icon" className="border-primary/25 bg-primary/10 hover:bg-primary/20 hover:text-primary">
+          <Link to="/sets"><ArrowLeft className="h-5 w-5" /></Link>
+        </Button>
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-foreground">{set.name}</h1>
+          {set.description && <p className="text-sm text-muted-foreground">{set.description}</p>}
+        </div>
+      </div>
+
+      <div className="mb-6 flex gap-3">
+        <Dialog open={open} onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) resetForm();
+        }}>
+          <DialogTrigger asChild>
+            <Button className="bg-gradient-primary text-[#0F172A]">
+              <Plus className="mr-2 h-4 w-4" /> Thêm từ
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-heading">{editingWord ? 'Chỉnh sửa từ' : 'Thêm từ mới'}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Từ vựng *</p>
+                <Input placeholder="Ví dụ: apple" value={form.word} onChange={e => setForm(f => ({ ...f, word: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Phát âm</p>
+                <Input placeholder="Ví dụ:/ˈæp.əl/" value={form.pronunciation} onChange={e => setForm(f => ({ ...f, pronunciation: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Nghĩa *</p>
+                <Input placeholder="Ví dụ:quả táo" value={form.meaning} onChange={e => setForm(f => ({ ...f, meaning: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Mô tả</p>
+                <Textarea placeholder="Ví dụ: A round fruit with red or green skin." value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Ví dụ</p>
+                <Textarea placeholder="Ví dụ: I eat an apple every day." value={form.example} onChange={e => setForm(f => ({ ...f, example: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Cụm từ cố định</p>
+                <Input placeholder="Ví dụ: apple pie" value={form.collocation} onChange={e => setForm(f => ({ ...f, collocation: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Từ liên quan</p>
+                <Input placeholder="Ví dụ: fruit, banana, orange" value={form.relatedWords} onChange={e => setForm(f => ({ ...f, relatedWords: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Ghi chú</p>
+                <Textarea placeholder="Ví dụ: Common everyday word" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
+              </div>
+              <Button onClick={handleSave} className="w-full bg-gradient-primary text-[#0F172A]">{editingWord ? 'Lưu thay đổi' : 'Thêm từ'}</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <ImportWords onImport={handleImport} existingWords={set.words} />
+
+        <Button variant="outline" className="border-accent/40 bg-accent/20 text-amber-800 hover:text-primary-foreground" onClick={handleExport}>
+          <Download className="mr-2 h-4 w-4" /> Export
+        </Button>
+
+        {set.words.length > 0 && (
+          <>
+            <Button asChild className="bg-gradient-primary text-[#0F172A]">
+              <Link to={`/learn/${set.id}`}>
+                <BookOpen className="mr-2 h-4 w-4" /> Học (10 từ)
+              </Link>
+            </Button>
+            {set.words.length >= 4 && (
+              <Button asChild variant="outline" className="border-accent/40 bg-accent/20 text-amber-800 hover:text-primary-foreground">
+                <Link to={`/quiz/${set.id}`}>
+                  <ListChecks className="mr-2 h-4 w-4" /> Quiz
+                </Link>
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+
+      {set.words.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border py-16">
+          <p className="text-muted-foreground">Chưa có từ nào. Thêm từ để bắt đầu!</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {set.words.map((w, i) => (
+            <motion.div
+              key={w.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.03 }}
+              className="group flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-card transition-all hover:shadow-elevated"
+            >
+              <div className="flex-1">
+                <div className="flex items-baseline gap-3">
+                  <span className="font-heading text-lg font-semibold text-foreground">{w.word}</span>
+                  {w.pronunciation && <span className="text-sm text-muted-foreground">{w.pronunciation}</span>}
+                </div>
+                <p className="text-sm text-primary">{w.meaning}</p>
+                {w.example && <p className="mt-1 text-xs italic text-muted-foreground">"{w.example}"</p>}
+              </div>
+              <div className="flex gap-1 opacity-60 transition-opacity group-hover:opacity-100">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground border border-gray-300 hover:border-primary/60 hover:text-primary"
+                  onClick={() => {
+                    setEditingWord(w);
+                    setForm({
+                      word: w.word,
+                      pronunciation: w.pronunciation,
+                      meaning: w.meaning,
+                      description: w.description,
+                      example: w.example,
+                      collocation: w.collocation,
+                      relatedWords: w.relatedWords,
+                      note: w.note,
+                    });
+                    setOpen(true);
+                  }}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground border border-gray-300 hover:border-destructive/60 hover:text-destructive"
+                  onClick={() => handleRemove(w.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
