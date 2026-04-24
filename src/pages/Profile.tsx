@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { User as UserIcon, Save, Mail, BookOpen, Award, Target } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,6 +16,7 @@ import { changePassword } from '@/lib/api';
 import { toast } from 'sonner';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Lock } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 const GOALS = [
   { value: 'IELTS', label: 'IELTS' },
@@ -25,6 +27,8 @@ const GOALS = [
 const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
 
 export default function Profile() {
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<UserProfile>({
@@ -73,6 +77,18 @@ export default function Profile() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSignOut = async () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('email');
+    localStorage.removeItem('fullName');
+    localStorage.removeItem('name');
+    localStorage.removeItem('username');
+    await signOut();
+    navigate('/auth');
   };
 
   if (loading) {
@@ -309,6 +325,14 @@ export default function Profile() {
               >
                 <Save className="mr-2 h-5 w-5" />
                 {saving ? 'Đang lưu…' : 'Lưu thay đổi'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSignOut}
+                className="mt-3 w-full border-accent/40 bg-accent/20 text-amber-800 hover:text-primary-foreground"
+              >
+                Đăng xuất
               </Button>
             </motion.div>
           </form>

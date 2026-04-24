@@ -32,6 +32,9 @@ export default function SetDetail() {
   const [set, setSet] = useState<VocabularySet | null>(null);
   const [open, setOpen] = useState(false);
   const [editingWord, setEditingWord] = useState<VocabularyWord | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedWordIds, setSelectedWordIds] = useState<Set<string>>(new Set());
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const [form, setForm] = useState({
     word: '', pronunciation: '', meaning: '', description: '',
     descriptionVi: '',
@@ -48,6 +51,20 @@ export default function SetDetail() {
   }, [id, navigate]);
 
   if (!set) return null;
+
+  const filteredWords = set.words.filter((w) => {
+    if (showSelectedOnly && !selectedWordIds.has(w.id)) return false;
+    const keyword = searchTerm.trim().toLowerCase();
+    if (!keyword) return true;
+    return [w.word, w.meaning, w.pronunciation, w.example, w.description, w.type, w.level]
+      .join(' ')
+      .toLowerCase()
+      .includes(keyword);
+  });
+
+  const selectedLearnLink = selectedWordIds.size > 0
+    ? `/learn/${set.id}?ids=${encodeURIComponent(Array.from(selectedWordIds).join(','))}`
+    : `/learn/${set.id}`;
 
   const resetForm = () => {
     setForm({ word: '', pronunciation: '', meaning: '', description: '', descriptionVi: '', example: '', exampleVi: '', collocation: '', relatedWords: '', note: '', type: '', level: '' });
@@ -93,13 +110,37 @@ export default function SetDetail() {
     if (!set) return;
     await deleteVocabulary(wordId);
     const refreshed = await getSet(String(set.id));
-    if (refreshed) setSet(refreshed);
+    if (refreshed) {
+      setSet(refreshed);
+      setSelectedWordIds((prev) => {
+        const next = new Set(prev);
+        next.delete(wordId);
+        return next;
+      });
+    }
   };
 
   const handleImport = async (words: VocabularyWord[]) => {
     if (!set) return;
     const updated = await importVocabularies(String(set.id), words);
     setSet(updated);
+  };
+
+  const toggleSelectWord = (wordId: string, checked: boolean) => {
+    setSelectedWordIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(wordId);
+      else next.delete(wordId);
+      return next;
+    });
+  };
+
+  const selectAllFiltered = () => {
+    setSelectedWordIds((prev) => {
+      const next = new Set(prev);
+      filteredWords.forEach((w) => next.add(w.id));
+      return next;
+    });
   };
 
   const handleExport = async () => {
@@ -226,8 +267,8 @@ export default function SetDetail() {
         {set.words.length > 0 && (
           <>
             <Button asChild className="bg-gradient-primary text-[#0F172A]">
-              <Link to={`/learn/${set.id}`}>
-                <BookOpen className="mr-2 h-4 w-4" /> Học (10 từ)
+              <Link to={selectedLearnLink}>
+                <BookOpen className="mr-2 h-4 w-4" /> {selectedWordIds.size > 0 ? `Học từ đã chọn (${selectedWordIds.size})` : 'Học (10 từ)'}
               </Link>
             </Button>
             {set.words.length >= 4 && (
@@ -241,13 +282,45 @@ export default function SetDetail() {
         )}
       </div>
 
+      {set.words.length > 0 && (
+        <div className="mb-4 space-y-3">
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Tìm theo từ, nghĩa, ví dụ, loại từ, level..."
+          />
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <Button type="button" variant="outline" size="sm" onClick={selectAllFiltered}>
+              Chọn tất cả đang hiển thị
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setSelectedWordIds(new Set())}>
+              Bỏ chọn tất cả
+            </Button>
+            <Button
+              type="button"
+              variant={showSelectedOnly ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShowSelectedOnly((prev) => !prev)}
+            >
+              {showSelectedOnly ? 'Đang lọc: chỉ từ đã chọn' : 'Chỉ hiện từ đã chọn'}
+            </Button>
+            <span>Đã chọn: {selectedWordIds.size} từ</span>
+            <span>Đang hiển thị: {filteredWords.length}/{set.words.length}</span>
+          </div>
+        </div>
+      )}
+
       {set.words.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border py-16">
           <p className="text-muted-foreground">Chưa có từ nào. Thêm từ để bắt đầu!</p>
         </div>
+      ) : filteredWords.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border py-16">
+          <p className="text-muted-foreground">Không tìm thấy từ phù hợp với từ khóa.</p>
+        </div>
       ) : (
         <div className="space-y-3">
-          {set.words.map((w, i) => (
+          {filteredWords.map((w, i) => (
             <motion.div
               key={w.id}
               initial={{ opacity: 0, x: -20 }}
@@ -255,7 +328,17 @@ export default function SetDetail() {
               transition={{ delay: i * 0.03 }}
               className="group flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-card transition-all hover:shadow-elevated"
             >
-              <div className="flex-1">
+              <div className="flex flex-1 gap-3">
+                <label className="mt-1 flex items-start">
+                  <input
+                    type="checkbox"
+                    checked={selectedWordIds.has(w.id)}
+                    onChange={(e) => toggleSelectWord(w.id, e.target.checked)}
+                    aria-label={`Chọn từ ${w.word}`}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                </label>
+                <div>
                 <div className="flex items-baseline gap-3">
                   <span className="font-heading text-lg font-semibold text-foreground">{w.word}</span>
                   {w.pronunciation && <span className="text-sm text-muted-foreground">{w.pronunciation}</span>}
@@ -268,6 +351,7 @@ export default function SetDetail() {
                   </div>
                 )}
                 {w.example && <p className="mt-1 text-xs italic text-muted-foreground">"{w.example}"</p>}
+                </div>
               </div>
               <div className="flex gap-1 opacity-60 transition-opacity group-hover:opacity-100">
                 <Button

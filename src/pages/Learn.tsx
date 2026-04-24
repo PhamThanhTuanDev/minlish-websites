@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Trophy, PartyPopper } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 
 export default function Learn() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [words, setWords] = useState<VocabularyWord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -27,11 +28,27 @@ export default function Learn() {
       const set = await getSet(id);
       if (!set) { navigate('/sets'); return; }
       setSetName(set.name);
+      const selectedIdsParam = searchParams.get('ids') || '';
+      const selectedIds = new Set(
+        selectedIdsParam
+          .split(',')
+          .map((value) => decodeURIComponent(value).trim())
+          .filter(Boolean)
+      );
+
+      if (selectedIds.size > 0) {
+        const selectedWords = set.words.filter((word) => selectedIds.has(word.id));
+        if (selectedWords.length > 0) {
+          setWords(selectedWords);
+          return;
+        }
+      }
+
       const reviewWords = await getWordsForReview(id);
       // Chọn tối đa số từ học chuẩn để UI ổn định và không tạo quá ít câu.
       setWords(pickStudyWords(reviewWords, set.words));
     })();
-  }, [id, navigate]);
+  }, [id, navigate, searchParams]);
 
   const handleRate = async (rating: SRSRating) => {
     if (!id || words.length === 0) return;
