@@ -4,10 +4,14 @@ export interface VocabularyWord {
   pronunciation: string;
   meaning: string;
   description: string;
+  descriptionVi?: string;
   example: string;
+  exampleVi?: string;
   collocation: string;
   relatedWords: string;
   note: string;
+  type?: string;
+  level?: string;
   easeFactor: number;
   interval: number;
   repetitions: number;
@@ -72,10 +76,14 @@ export function createNewWord(partial: Partial<VocabularyWord> & { word: string;
     id: crypto.randomUUID(),
     pronunciation: '',
     description: '',
+    descriptionVi: '',
     example: '',
+    exampleVi: '',
     collocation: '',
     relatedWords: '',
     note: '',
+    type: '',
+    level: '',
     easeFactor: 2.5,
     interval: 0,
     repetitions: 0,

@@ -6,6 +6,7 @@ import ImportWords from '@/components/ImportWords';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { VocabularyWord, createNewWord, VocabularySet } from '@/lib/types';
 import { addVocabularyToSet, deleteVocabulary, exportVocabularySet, getSet, importVocabularies, updateVocabulary } from '@/lib/api';
@@ -13,6 +14,17 @@ import { toast } from 'sonner';
 
 // Dedupe by word only (case-insensitive, trimmed) to block "Apple" vs "apple".
 const normalizeKey = (word: string) => word.toLowerCase().trim();
+const WORD_TYPES = [
+  { value: 'noun', label: 'Danh từ' },
+  { value: 'verb', label: 'Động từ' },
+  { value: 'adjective', label: 'Tính từ' },
+  { value: 'adverb', label: 'Trạng từ' },
+  { value: 'phrase', label: 'Cụm từ' },
+  { value: 'idiom', label: 'Thành ngữ' },
+  { value: 'collocation', label: 'Collocation' },
+  { value: 'other', label: 'Khác' },
+];
+const WORD_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
 export default function SetDetail() {
   const { id } = useParams<{ id: string }>();
@@ -22,7 +34,8 @@ export default function SetDetail() {
   const [editingWord, setEditingWord] = useState<VocabularyWord | null>(null);
   const [form, setForm] = useState({
     word: '', pronunciation: '', meaning: '', description: '',
-    example: '', collocation: '', relatedWords: '', note: '',
+    descriptionVi: '',
+    example: '', exampleVi: '', collocation: '', relatedWords: '', note: '', type: '', level: '',
   });
 
   useEffect(() => {
@@ -37,7 +50,7 @@ export default function SetDetail() {
   if (!set) return null;
 
   const resetForm = () => {
-    setForm({ word: '', pronunciation: '', meaning: '', description: '', example: '', collocation: '', relatedWords: '', note: '' });
+    setForm({ word: '', pronunciation: '', meaning: '', description: '', descriptionVi: '', example: '', exampleVi: '', collocation: '', relatedWords: '', note: '', type: '', level: '' });
     setEditingWord(null);
   };
 
@@ -144,8 +157,16 @@ export default function SetDetail() {
                 <Textarea placeholder="Ví dụ: A round fruit with red or green skin." value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
               <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Mô tả tiếng Việt</p>
+                <Textarea placeholder="Ví dụ: Một loại trái cây tròn, có vỏ đỏ hoặc xanh." value={form.descriptionVi} onChange={e => setForm(f => ({ ...f, descriptionVi: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
                 <p className="text-sm font-medium text-foreground">Ví dụ</p>
                 <Textarea placeholder="Ví dụ: I eat an apple every day." value={form.example} onChange={e => setForm(f => ({ ...f, example: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">Ví dụ tiếng Việt</p>
+                <Textarea placeholder="Ví dụ: Tôi ăn một quả táo mỗi ngày." value={form.exampleVi} onChange={e => setForm(f => ({ ...f, exampleVi: e.target.value }))} />
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-foreground">Cụm từ cố định</p>
@@ -158,6 +179,38 @@ export default function SetDetail() {
               <div className="space-y-1">
                 <p className="text-sm font-medium text-foreground">Ghi chú</p>
                 <Textarea placeholder="Ví dụ: Common everyday word" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Loại từ</p>
+                  <Select value={form.type} onValueChange={(value) => setForm(f => ({ ...f, type: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn loại từ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WORD_TYPES.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Trình độ</p>
+                  <Select value={form.level} onValueChange={(value) => setForm(f => ({ ...f, level: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {WORD_LEVELS.map((level) => (
+                        <SelectItem key={level} value={level}>
+                          {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <Button onClick={handleSave} className="w-full bg-gradient-primary text-[#0F172A]">{editingWord ? 'Lưu thay đổi' : 'Thêm từ'}</Button>
             </div>
@@ -208,6 +261,12 @@ export default function SetDetail() {
                   {w.pronunciation && <span className="text-sm text-muted-foreground">{w.pronunciation}</span>}
                 </div>
                 <p className="text-sm text-primary">{w.meaning}</p>
+                {(w.type || w.level) && (
+                  <div className="mt-1 flex gap-2">
+                    {w.type && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{w.type}</span>}
+                    {w.level && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">{w.level}</span>}
+                  </div>
+                )}
                 {w.example && <p className="mt-1 text-xs italic text-muted-foreground">"{w.example}"</p>}
               </div>
               <div className="flex gap-1 opacity-60 transition-opacity group-hover:opacity-100">
@@ -222,10 +281,14 @@ export default function SetDetail() {
                       pronunciation: w.pronunciation,
                       meaning: w.meaning,
                       description: w.description,
+                      descriptionVi: w.descriptionVi || '',
                       example: w.example,
+                      exampleVi: w.exampleVi || '',
                       collocation: w.collocation,
                       relatedWords: w.relatedWords,
                       note: w.note,
+                      type: w.type || '',
+                      level: w.level || '',
                     });
                     setOpen(true);
                   }}

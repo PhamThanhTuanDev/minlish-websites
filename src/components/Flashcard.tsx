@@ -98,6 +98,10 @@ export default function Flashcard({ word, onRate, current, total }: FlashcardPro
             className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-border bg-card p-8 shadow-elevated"
             style={{ backfaceVisibility: 'hidden' }}
           >
+            <div className="mb-3 flex flex-wrap items-center justify-center gap-2 text-xs">
+              {word.type && <span className="rounded-full bg-primary/10 px-2 py-1 font-medium text-primary">{word.type}</span>}
+              {word.level && <span className="rounded-full bg-accent/15 px-2 py-1 font-medium text-amber-800">{word.level}</span>}
+            </div>
             <p className="mb-2 text-sm text-muted-foreground">{word.pronunciation}</p>
             <div className="flex items-center gap-3">
               <h2 className="font-heading text-4xl font-bold text-foreground">{word.word}</h2>
@@ -126,10 +130,21 @@ export default function Flashcard({ word, onRate, current, total }: FlashcardPro
             <div className="flex flex-col items-center gap-2 text-center">
               <h3 className="font-heading text-3xl font-bold tracking-tight text-primary">{word.meaning}</h3>
             </div>
+            {(word.type || word.level) && (
+              <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs">
+                {word.type && <span className="rounded-full bg-primary/10 px-2 py-1 font-medium text-primary">{word.type}</span>}
+                {word.level && <span className="rounded-full bg-accent/15 px-2 py-1 font-medium text-amber-800">{word.level}</span>}
+              </div>
+            )}
             {word.example && (
               <p className="mt-8 text-sm italic leading-relaxed text-muted-foreground">
                 <span className="font-semibold not-italic">Example:</span>{' '}
                 "{renderHighlightedText(word.example, word.word)}"
+              </p>
+            )}
+            {word.exampleVi && (
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                <span className="font-semibold">Ví dụ VI:</span> {word.exampleVi}
               </p>
             )}
             {word.collocation && (

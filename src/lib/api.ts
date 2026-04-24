@@ -88,10 +88,14 @@ function parseIsoWord(word: any): VocabularyWord {
     pronunciation: String(word.pronunciation ?? ''),
     meaning: String(word.meaning ?? ''),
     description: String(word.description ?? ''),
+    descriptionVi: String(word.descriptionVi ?? word.description_vi ?? ''),
     example: String(word.example ?? word.exampleSentence ?? ''),
+    exampleVi: String(word.exampleVi ?? word.example_vi ?? ''),
     collocation: String(word.collocation ?? word.fixedPhrase ?? ''),
     relatedWords: String(word.relatedWords ?? ''),
     note: String(word.note ?? word.notes ?? ''),
+    type: String(word.type ?? ''),
+    level: String(word.level ?? ''),
     easeFactor: Number(word.easeFactor ?? 2.5),
     interval: Number(word.interval ?? 0),
     repetitions: Number(word.repetitions ?? 0),
@@ -265,10 +269,14 @@ export async function addVocabularyToSet(setId: string, word: VocabularyWord): P
     pronunciation: word.pronunciation,
     meaning: word.meaning,
     description: word.description,
+    descriptionVi: word.descriptionVi,
     exampleSentence: word.example,
+    exampleVi: word.exampleVi,
     fixedPhrase: word.collocation,
     relatedWords: word.relatedWords,
     notes: word.note,
+    type: word.type,
+    level: word.level,
   };
   const result = await fetchJson<any>(`/api/vocabularies/set/${encodeURIComponent(setId)}`, {
     method: 'POST',
@@ -288,10 +296,14 @@ export async function updateVocabulary(vocabId: string, updates: Partial<Vocabul
     pronunciation: updates.pronunciation,
     meaning: updates.meaning,
     description: updates.description,
+    descriptionVi: updates.descriptionVi,
     exampleSentence: updates.example,
+    exampleVi: updates.exampleVi,
     fixedPhrase: updates.collocation,
     relatedWords: updates.relatedWords,
     notes: updates.note,
+    type: updates.type,
+    level: updates.level,
   };
   const result = await fetchJson<any>(`/api/vocabularies/${encodeURIComponent(vocabId)}`, {
     method: 'PUT',
@@ -394,6 +406,8 @@ export interface LearningPlan {
 export interface DueReviewWord {
   vocabularyId: number;
   word: string;
+  type?: string;
+  level?: string;
   nextReviewDate?: string;
   lastReviewDate?: string;
   overdueDays?: number;
@@ -523,6 +537,8 @@ export async function getDueReviewSets(): Promise<DueReviewSet[]> {
     words: (Array.isArray(set?.words) ? set.words : []).map((word: any) => ({
       vocabularyId: Number(word?.vocabularyId ?? 0),
       word: String(word?.word ?? ''),
+      type: word?.type != null ? String(word.type) : undefined,
+      level: word?.level != null ? String(word.level) : undefined,
       nextReviewDate: word?.nextReviewDate != null ? String(word.nextReviewDate) : undefined,
       lastReviewDate: word?.lastReviewDate != null ? String(word.lastReviewDate) : undefined,
       overdueDays: Number(word?.overdueDays ?? 0),

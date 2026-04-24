@@ -11,7 +11,7 @@ interface ImportWordsProps {
   className?: string;
 }
 
-const EXPECTED_COLUMNS = ['word', 'meaning', 'pronunciation', 'description', 'example', 'collocation', 'relatedWords', 'note'];
+const EXPECTED_COLUMNS = ['word', 'meaning', 'pronunciation', 'description', 'description_vi', 'example', 'example_vi', 'collocation', 'relatedWords', 'note', 'type', 'level'];
 
 // Dedupe by word only (case-insensitive, trimmed) to block "Apple" vs "apple".
 const normalizeKey = (word: string) => word.toLowerCase().trim();
@@ -107,10 +107,14 @@ export default function ImportWords({ onImport, existingWords, className }: Impo
         meaning: row.meaning,
         pronunciation: pick(row, ['pronunciation']),
         description: pick(row, ['description']),
+        descriptionVi: pick(row, ['description_vi', 'descriptionvi']),
         example: pick(row, ['example', 'example_sentence']),
+        exampleVi: pick(row, ['example_vi', 'examplevi']),
         collocation: pick(row, ['collocation', 'fixed_phrase']),
         relatedWords: pick(row, ['relatedwords', 'related_words']),
         note: pick(row, ['note', 'notes']),
+        type: pick(row, ['type']),
+        level: pick(row, ['level']),
       }));
       return acc;
     }, []);
@@ -136,7 +140,7 @@ export default function ImportWords({ onImport, existingWords, className }: Impo
             <FileSpreadsheet className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
             <p className="mb-1 text-sm font-medium text-foreground">Chọn file CSV hoặc Excel</p>
             <p className="mb-3 text-xs text-muted-foreground">
-              Cần có cột <strong>word</strong> và <strong>meaning</strong>. Các cột khác tùy chọn: pronunciation, description, example, collocation, relatedWords, note
+              Cần có cột <strong>word</strong> và <strong>meaning</strong>. Các cột khác tùy chọn: pronunciation, description, description_vi, example, example_vi, collocation, relatedWords, note, type, level
             </p>
             <input
               ref={fileRef}

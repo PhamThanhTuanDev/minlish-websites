@@ -249,13 +249,29 @@ export default function VocabSets() {
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {set.words.slice(0, 8).map((word) => (
-                        <span
+                        <div
                           key={`${set.setId}-${word.vocabularyId}`}
-                          className="rounded-full border border-orange-300 bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700"
+                          className="rounded-lg border border-orange-300 bg-orange-100 px-2 py-1 text-xs text-orange-800"
                         >
-                          {word.word}
-                          {(word.overdueDays ?? 0) > 0 ? ` (${word.overdueDays} ngày trễ)` : ''}
-                        </span>
+                          <div className="font-semibold">{word.word}</div>
+                          <div className="mt-1 flex flex-wrap items-center gap-1">
+                            {word.type && (
+                              <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                                {word.type}
+                              </span>
+                            )}
+                            {word.level && (
+                              <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                                {word.level}
+                              </span>
+                            )}
+                            {(word.overdueDays ?? 0) > 0 && (
+                              <span className="text-[10px] font-medium text-orange-700">
+                                {word.overdueDays} ngày trễ
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       ))}
                       {set.totalDueWords > 8 && (
                         <span className="rounded-full border border-border bg-background px-2 py-1 text-xs text-muted-foreground">
