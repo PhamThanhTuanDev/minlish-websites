@@ -23,7 +23,7 @@ jobs:
       run: npm install
 
     - name: 🛠️ Build Project
-      run: npm run build # Hoặc yarn build tùy bạn dùng cái nào
+      run: npm install --legacy-peer-deps # Hoặc yarn build tùy bạn dùng cái nào
 
     - name: 🚀 Sync files to cPanel via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
