@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { login, register } from '@/lib/api';
+import { getUserProfile, login, register } from '@/lib/api';
 import { forgotPassword } from '@/lib/api';
 import { toast } from 'sonner';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -45,7 +45,12 @@ export default function Auth() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
 
-  const backendBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  const backendBaseUrl =
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_API_URL ||
+    (window.location.hostname.includes('minlish.site')
+      ? 'https://api.minlish.site'
+      : 'http://localhost:8080');
 
   const persistAuth = (response: any) => {
     const token = response.accessToken || response.token || (response as any).accessToken;
@@ -92,10 +97,22 @@ export default function Auth() {
     localStorage.setItem('userId', userId || '');
     localStorage.setItem('email', email || '');
     localStorage.setItem('fullName', fullName || '');
-    sessionStorage.removeItem('oauth_return_to');
 
-    toast.success('Đăng nhập Google thành công!');
-    navigate(finalRedirectTo, { replace: true });
+    void (async () => {
+      try {
+        // Always hydrate profile from API to avoid stale/blank fields after OAuth callback.
+        const profile = await getUserProfile();
+        localStorage.setItem('userId', profile.userId || userId || '');
+        localStorage.setItem('email', profile.email || email || '');
+        localStorage.setItem('fullName', profile.fullName || fullName || '');
+      } catch {
+        // Keep fallback values from OAuth fragment when profile API is temporarily unavailable.
+      } finally {
+        sessionStorage.removeItem('oauth_return_to');
+        toast.success('Đăng nhập Google thành công!');
+        navigate(finalRedirectTo, { replace: true });
+      }
+    })();
   }, [location.hash, location.pathname, location.search, navigate, finalRedirectTo]);
 
   // Khi chuyển sang trang khác hoặc đăng nhập thành công, reset dialog và lỗi
