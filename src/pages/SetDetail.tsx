@@ -175,7 +175,7 @@ export default function SetDetail() {
         </div>
       </div>
 
-      <div className="mb-6 flex gap-3">
+      <div className="mb-6 flex gap-3 flex-wrap">
         <Dialog open={open} onOpenChange={(v) => {
           setOpen(v);
           if (!v) resetForm();
