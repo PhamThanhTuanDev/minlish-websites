@@ -52,14 +52,23 @@ export default function SetDetail() {
 
   if (!set) return null;
 
+  // const filteredWords = set.words.filter((w) => {
+  //   if (showSelectedOnly && !selectedWordIds.has(w.id)) return false;
+  //   const keyword = searchTerm.trim().toLowerCase();
+  //   if (!keyword) return true;
+  //   return [w.word, w.meaning, w.pronunciation, w.example, w.description, w.type, w.level]
+  //     .join(' ')
+  //     .toLowerCase()
+  //     .includes(keyword);
+  // });
+
   const filteredWords = set.words.filter((w) => {
     if (showSelectedOnly && !selectedWordIds.has(w.id)) return false;
     const keyword = searchTerm.trim().toLowerCase();
     if (!keyword) return true;
-    return [w.word, w.meaning, w.pronunciation, w.example, w.description, w.type, w.level]
-      .join(' ')
-      .toLowerCase()
-      .includes(keyword);
+    
+    // Chỉ tìm kiếm chứa từ khóa trong trường 'word'
+    return w.word.toLowerCase().includes(keyword);
   });
 
   const selectedLearnLink = selectedWordIds.size > 0
@@ -285,10 +294,10 @@ export default function SetDetail() {
       {set.words.length > 0 && (
         <div className="mb-4 space-y-3">
           <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Tìm theo từ, nghĩa, ví dụ, loại từ, level..."
-          />
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  placeholder="Tìm kiếm từ vựng..."
+/>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Button type="button" variant="outline" size="sm" onClick={selectAllFiltered}>
               Chọn tất cả đang hiển thị
