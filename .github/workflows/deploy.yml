@@ -3,7 +3,7 @@ name: Deploy Frontend to cPanel
 on:
   push:
     branches:
-      - main # Workflow sẽ chạy khi có code mới push lên nhánh main
+      - main
 
 jobs:
   web-deploy:
@@ -17,19 +17,22 @@ jobs:
     - name: ⚙️ Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20' # Cập nhật version Node phù hợp với project của bạn (18 hoặc 20)
+        node-version: '20'
 
     - name: 📦 Install Dependencies
       run: npm install --legacy-peer-deps
 
     - name: 🛠️ Build Project
-      run: npm run build # Hoặc yarn build tùy bạn dùng cái nào
+      run: npm run build
 
-    - name: 🚀 Sync files to cPanel via FTP
+    # 🧹 XÓA FILE CŨ TRÊN SERVER + upload lại sạch
+    - name: 🚀 Deploy to cPanel via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./dist/ # Thư mục sau khi build của bạn (Vite/Vue thường là dist, React CRA là build)
-        server-dir: ./ # Vì lúc nãy tài khoản FTP đã trỏ thẳng vào public_html/minlish.site rồi
+        local-dir: ./dist/
+        server-dir: ./
+        dangerous-clean-slate: true   # 🔥 QUAN TRỌNG NHẤT
+        log-level: verbose            # để debug nếu cần
