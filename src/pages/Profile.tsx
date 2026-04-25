@@ -52,7 +52,20 @@ export default function Profile() {
       .then((p) => {
         if (!cancelled) setForm(p);
       })
-      .catch((e: Error) => toast.error(e.message))
+      .catch((e: Error) => {
+        if (!cancelled) {
+          const fallbackEmail = localStorage.getItem('email') || '';
+          const fallbackFullName = localStorage.getItem('fullName') || '';
+          if (fallbackEmail || fallbackFullName) {
+            setForm((prev) => ({
+              ...prev,
+              email: fallbackEmail || prev.email,
+              fullName: fallbackFullName || prev.fullName,
+            }));
+          }
+        }
+        toast.error(e.message);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
