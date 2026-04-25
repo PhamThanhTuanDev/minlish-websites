@@ -20,7 +20,7 @@ jobs:
         node-version: '20' # Cập nhật version Node phù hợp với project của bạn (18 hoặc 20)
 
     - name: 📦 Install Dependencies
-      run: npm install --legacy-peer-deps
+      run: npm install
 
     - name: 🛠️ Build Project
       run: npm run build # Hoặc yarn build tùy bạn dùng cái nào
