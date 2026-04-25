@@ -20,10 +20,10 @@ jobs:
         node-version: '20' # Cập nhật version Node phù hợp với project của bạn (18 hoặc 20)
 
     - name: 📦 Install Dependencies
-      run: npm install
+      run: npm install --legacy-peer-deps
 
     - name: 🛠️ Build Project
-      run: npm install --legacy-peer-deps # Hoặc yarn build tùy bạn dùng cái nào
+      run: npm run build # Hoặc yarn build tùy bạn dùng cái nào
 
     - name: 🚀 Sync files to cPanel via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
