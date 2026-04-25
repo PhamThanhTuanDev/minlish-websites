@@ -22,6 +22,11 @@ jobs:
     - name: 📦 Install Dependencies
       run: npm install --legacy-peer-deps
 
+      # THÊM BƯỚC NÀY VÀO ĐÂY: Tạo file .env để Vite đọc được
+    - name: 📝 Create env file
+      run: |
+        echo "VITE_API_BASE_URL=https://api.minlish.site" >> .env
+
     - name: 🛠️ Build Project
       run: npm run build
 
