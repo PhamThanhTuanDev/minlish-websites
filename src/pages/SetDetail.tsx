@@ -34,6 +34,10 @@ export default function SetDetail() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedWordIds, setSelectedWordIds] = useState<Set<string>>(new Set());
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  const [createNewSetOpen, setCreateNewSetOpen] = useState(false);
+  const [newSetName, setNewSetName] = useState('');
+  const [newSetDescription, setNewSetDescription] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
   
   // State quản lý số lượng từ hiển thị (Lazy load)
   const [visibleCount, setVisibleCount] = useState(50);
@@ -165,6 +169,52 @@ export default function SetDetail() {
     }
   };
 
+  const handleCreateNewSetFromSelected = async () => {
+    if (!set || selectedWordIds.size === 0) {
+      toast.error('Vui lòng chọn ít nhất một từ');
+      return;
+    }
+
+    if (!newSetName.trim()) {
+      toast.error('Vui lòng nhập tên bộ từ mới');
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      // 1. Tạo bộ từ mới
+      const newSet = await saveSet({
+        id: undefined,
+        name: newSetName.trim(),
+        description: newSetDescription.trim(),
+        words: [],
+        tags: [],
+        createdAt: new Date(),
+      });
+
+      // 2. Add từ đã chọn vào bộ từ mới
+      const wordIdsArray = Array.from(selectedWordIds);
+      if (wordIdsArray.length > 0) {
+        const { addWordsToSet } = await import('@/lib/api');
+        await addWordsToSet(String(newSet.id), wordIdsArray);
+      }
+
+      toast.success(`Đã tạo bộ từ mới "${newSetName}" với ${selectedWordIds.size} từ`);
+      setCreateNewSetOpen(false);
+      setNewSetName('');
+      setNewSetDescription('');
+      setSelectedWordIds(new Set());
+      
+      // Redirect đến bộ từ mới
+      navigate(`/sets/${newSet.id}`);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Lỗi tạo bộ từ mới';
+      toast.error(msg);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
       <div className="mb-6 flex items-center gap-3">
@@ -274,6 +324,61 @@ export default function SetDetail() {
         <Button variant="outline" className="border-accent/40 bg-accent/20 text-amber-800 hover:text-primary-foreground" onClick={handleExport}>
           <Download className="mr-2 h-4 w-4" /> Export
         </Button>
+
+        {selectedWordIds.size > 0 && (
+          <Dialog open={createNewSetOpen} onOpenChange={setCreateNewSetOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-primary text-[#0F172A]">
+                <Plus className="mr-2 h-4 w-4" /> Tạo bộ từ mới ({selectedWordIds.size})
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="font-heading">Tạo bộ từ mới từ các từ đã chọn</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Tên bộ từ mới *</p>
+                  <Input
+                    placeholder="Ví dụ: Từ phổ biến A1"
+                    value={newSetName}
+                    onChange={(e) => setNewSetName(e.target.value)}
+                    disabled={isCreating}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Mô tả (tùy chọn)</p>
+                  <Textarea
+                    placeholder="Ví dụ: Bộ từ phổ biến dành cho trình độ A1"
+                    value={newSetDescription}
+                    onChange={(e) => setNewSetDescription(e.target.value)}
+                    disabled={isCreating}
+                    rows={3}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Sẽ tạo bộ từ mới với <strong>{selectedWordIds.size}</strong> từ từ bộ "{set.name}"
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleCreateNewSetFromSelected}
+                    className="flex-1 bg-gradient-primary text-[#0F172A]"
+                    disabled={isCreating || !newSetName.trim()}
+                  >
+                    {isCreating ? 'Đang tạo...' : 'Tạo bộ từ'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setCreateNewSetOpen(false)}
+                    disabled={isCreating}
+                  >
+                    Hủy
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
 
         {set.words.length > 0 && (
           <>

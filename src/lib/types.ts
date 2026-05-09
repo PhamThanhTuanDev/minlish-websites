@@ -1,5 +1,6 @@
 export interface VocabularyWord {
   id: string;
+  setId?: string;
   word: string;
   pronunciation: string;
   meaning: string;

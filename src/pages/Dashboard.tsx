@@ -3,8 +3,11 @@ import { motion } from 'framer-motion';
 import { Award, BookOpen, Clock, Flame, Target, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line } from 'recharts';
 import { LearningStats } from '@/lib/types';
-import { getStats } from '@/lib/api';
+import { getReviewedWordsToday, getStats } from '@/lib/api';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import { VocabularyWord } from '@/lib/types';
 
 function localYmd(d: Date): string {
   const y = d.getFullYear();
@@ -91,6 +94,7 @@ const statCards = [
 
 export default function Dashboard() {
   const [stats, setStats] = useState<LearningStats | null>(null);
+  const [reviewedTodayWords, setReviewedTodayWords] = useState<VocabularyWord[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,6 +115,25 @@ export default function Dashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    void getReviewedWordsToday()
+      .then((words) => {
+        if (!cancelled) {
+          setReviewedTodayWords(words);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReviewedTodayWords([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   if (!stats) return null;
 
   const chartData = buildChartRows(
@@ -118,6 +141,17 @@ export default function Dashboard() {
     14,
   );
   const totalTimeSpentSeconds = stats.totalTimeSpent ?? 0;
+  const groupedBySet = reviewedTodayWords.reduce<Record<string, VocabularyWord[]>>((acc, word) => {
+    const setId = String(word.setId ?? '').trim();
+    if (!setId) {
+      return acc;
+    }
+    if (!acc[setId]) {
+      acc[setId] = [];
+    }
+    acc[setId].push(word);
+    return acc;
+  }, {});
 
   return (
     <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
@@ -212,6 +246,83 @@ export default function Dashboard() {
               <Line type="monotone" dataKey="Retention %" stroke="hsl(var(--accent))" strokeWidth={2} dot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
+        )}
+      </motion.div>
+
+      {/* Reviewed Today */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+        className="rounded-2xl border border-border bg-card p-6 shadow-card"
+      >
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-heading text-lg font-semibold text-foreground">Từ đã học hôm nay</h2>
+            <p className="text-sm text-muted-foreground">
+              Hôm nay bạn đã học <strong>{reviewedTodayWords.length}</strong> từ.
+            </p>
+          </div>
+          <Button asChild variant="outline" className="border-accent/40 bg-accent/20 text-amber-800 hover:text-primary-foreground">
+            <Link to="/sets?tab=plan">Xem từ đến hạn</Link>
+          </Button>
+        </div>
+
+        {reviewedTodayWords.length === 0 ? (
+          <p className="text-muted-foreground">Hôm nay bạn chưa học từ nào. Bắt đầu một phiên học để hệ thống lưu lịch sử nhé.</p>
+        ) : (
+          <div className="space-y-4">
+            {Object.entries(groupedBySet).length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(groupedBySet).map(([setId, words]) => {
+                  const ids = words.map((word) => encodeURIComponent(word.id)).join(',');
+                  return (
+                    <Button
+                      key={setId}
+                      asChild
+                      variant="outline"
+                      className="border-primary/30 bg-primary/10 hover:bg-primary/20"
+                    >
+                      <Link to={`/learn/${setId}?ids=${ids}`}>Ôn lại bộ {setId} ({words.length})</Link>
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="max-h-80 overflow-auto rounded-xl border border-border">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-muted/80">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Từ</th>
+                    <th className="px-3 py-2 text-left">Nghĩa</th>
+                    <th className="px-3 py-2 text-left">Loại</th>
+                    <th className="px-3 py-2 text-left">Trình độ</th>
+                    <th className="px-3 py-2 text-right">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reviewedTodayWords.map((word) => (
+                    <tr key={word.id} className="border-t border-border">
+                      <td className="px-3 py-2 font-medium">{word.word}</td>
+                      <td className="px-3 py-2">{word.meaning}</td>
+                      <td className="px-3 py-2">{word.type || '-'}</td>
+                      <td className="px-3 py-2">{word.level || '-'}</td>
+                      <td className="px-3 py-2 text-right">
+                        {word.setId ? (
+                          <Button asChild size="sm" variant="outline" className="border-accent/40 bg-accent/20 text-amber-800 hover:text-primary-foreground">
+                            <Link to={`/learn/${word.setId}?ids=${encodeURIComponent(word.id)}`}>Ôn lại</Link>
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </motion.div>
 

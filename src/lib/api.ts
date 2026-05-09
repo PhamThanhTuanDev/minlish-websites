@@ -84,6 +84,7 @@ function parseIsoWord(word: any): VocabularyWord {
 
   return {
     id: String(word.id ?? crypto.randomUUID()),
+    setId: String(word.vocabularySetId ?? word.setId ?? word.vocabularySet?.id ?? ''),
     word: String(word.word ?? ''),
     pronunciation: String(word.pronunciation ?? ''),
     meaning: String(word.meaning ?? ''),
@@ -355,6 +356,17 @@ export async function rateVocabulary(payload: StudyRatingPayload): Promise<void>
 
 export async function getTodayStudySessions(): Promise<StudySession[]> {
   return fetchJson<StudySession[]>('/api/study/today');
+}
+
+export async function getReviewedWordsToday(setId?: string): Promise<VocabularyWord[]> {
+  const params = new URLSearchParams();
+  if (setId) {
+    params.set('setId', setId);
+  }
+  const query = params.toString();
+  const path = `/api/study/reviewed-today${query ? `?${query}` : ''}`;
+  const result = await fetchJson<any[]>(path);
+  return (Array.isArray(result) ? result : []).map(parseIsoWord);
 }
 
 // ============ Stats API ============
@@ -697,4 +709,18 @@ export async function getWordsForReview(setId: string): Promise<VocabularyWord[]
   if (!set) return [];
   const now = new Date();
   return set.words.filter(w => w.nextReview <= now);
+}
+
+/**
+ * Bulk add từ vào bộ từ mới (copy từ các ID đã chọn)
+ */
+export async function addWordsToSet(setId: string, wordIds: string[]): Promise<void> {
+  if (!wordIds || wordIds.length === 0) {
+    throw new Error('Danh sách từ không được trống');
+  }
+  
+  await fetchJson<void>(`/api/vocabularies/set/${encodeURIComponent(setId)}/add-words`, {
+    method: 'POST',
+    body: JSON.stringify({ wordIds: wordIds.map(id => Number(id)) }),
+  });
 }
