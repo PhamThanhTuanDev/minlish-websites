@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { ArrowLeft, Plus, Trash2, BookOpen, ListChecks, Download, Edit } from 'lucide-react';
 import ImportWords from '@/components/ImportWords';
 import { Button } from '@/components/ui/button';
@@ -35,6 +34,10 @@ export default function SetDetail() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedWordIds, setSelectedWordIds] = useState<Set<string>>(new Set());
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  
+  // State quản lý số lượng từ hiển thị (Lazy load)
+  const [visibleCount, setVisibleCount] = useState(50);
+
   const [form, setForm] = useState({
     word: '', pronunciation: '', meaning: '', description: '',
     descriptionVi: '',
@@ -50,18 +53,14 @@ export default function SetDetail() {
     })();
   }, [id, navigate]);
 
+  // Reset số lượng hiển thị về 50 mỗi khi gõ tìm kiếm hoặc đổi bộ lọc
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [searchTerm, showSelectedOnly]);
+
   if (!set) return null;
 
-  // const filteredWords = set.words.filter((w) => {
-  //   if (showSelectedOnly && !selectedWordIds.has(w.id)) return false;
-  //   const keyword = searchTerm.trim().toLowerCase();
-  //   if (!keyword) return true;
-  //   return [w.word, w.meaning, w.pronunciation, w.example, w.description, w.type, w.level]
-  //     .join(' ')
-  //     .toLowerCase()
-  //     .includes(keyword);
-  // });
-
+  // Lọc toàn bộ từ vựng theo từ khóa
   const filteredWords = set.words.filter((w) => {
     if (showSelectedOnly && !selectedWordIds.has(w.id)) return false;
     const keyword = searchTerm.trim().toLowerCase();
@@ -70,6 +69,9 @@ export default function SetDetail() {
     // Chỉ tìm kiếm chứa từ khóa trong trường 'word'
     return w.word.toLowerCase().includes(keyword);
   });
+
+  // Cắt mảng để chỉ hiển thị số lượng nhất định (giúp chống lag)
+  const visibleWords = filteredWords.slice(0, visibleCount);
 
   const selectedLearnLink = selectedWordIds.size > 0
     ? `/learn/${set.id}?ids=${encodeURIComponent(Array.from(selectedWordIds).join(','))}`
@@ -294,13 +296,13 @@ export default function SetDetail() {
       {set.words.length > 0 && (
         <div className="mb-4 space-y-3">
           <Input
-  value={searchTerm}
-  onChange={(e) => setSearchTerm(e.target.value)}
-  placeholder="Tìm kiếm từ vựng..."
-/>
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Tìm kiếm từ vựng..."
+          />
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Button type="button" variant="outline" size="sm" onClick={selectAllFiltered}>
-              Chọn tất cả đang hiển thị
+              Chọn tất cả kết quả tìm kiếm
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => setSelectedWordIds(new Set())}>
               Bỏ chọn tất cả
@@ -314,7 +316,7 @@ export default function SetDetail() {
               {showSelectedOnly ? 'Đang lọc: chỉ từ đã chọn' : 'Chỉ hiện từ đã chọn'}
             </Button>
             <span>Đã chọn: {selectedWordIds.size} từ</span>
-            <span>Đang hiển thị: {filteredWords.length}/{set.words.length}</span>
+            <span>Tổng số: {filteredWords.length} kết quả</span>
           </div>
         </div>
       )}
@@ -329,12 +331,10 @@ export default function SetDetail() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredWords.map((w, i) => (
-            <motion.div
+          {/* SỬ DỤNG visibleWords thay vì filteredWords ĐỂ RENDER */}
+          {visibleWords.map((w) => (
+            <div
               key={w.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.03 }}
               className="group flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-card transition-all hover:shadow-elevated"
             >
               <div className="flex flex-1 gap-3">
@@ -348,18 +348,18 @@ export default function SetDetail() {
                   />
                 </label>
                 <div>
-                <div className="flex items-baseline gap-3">
-                  <span className="font-heading text-lg font-semibold text-foreground">{w.word}</span>
-                  {w.pronunciation && <span className="text-sm text-muted-foreground">{w.pronunciation}</span>}
-                </div>
-                <p className="text-sm text-primary">{w.meaning}</p>
-                {(w.type || w.level) && (
-                  <div className="mt-1 flex gap-2">
-                    {w.type && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{w.type}</span>}
-                    {w.level && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">{w.level}</span>}
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-heading text-lg font-semibold text-foreground">{w.word}</span>
+                    {w.pronunciation && <span className="text-sm text-muted-foreground">{w.pronunciation}</span>}
                   </div>
-                )}
-                {w.example && <p className="mt-1 text-xs italic text-muted-foreground">"{w.example}"</p>}
+                  <p className="text-sm text-primary">{w.meaning}</p>
+                  {(w.type || w.level) && (
+                    <div className="mt-1 flex gap-2">
+                      {w.type && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{w.type}</span>}
+                      {w.level && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">{w.level}</span>}
+                    </div>
+                  )}
+                  {w.example && <p className="mt-1 text-xs italic text-muted-foreground">"{w.example}"</p>}
                 </div>
               </div>
               <div className="flex gap-1 opacity-60 transition-opacity group-hover:opacity-100">
@@ -397,8 +397,21 @@ export default function SetDetail() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-            </motion.div>
+            </div>
           ))}
+
+          {/* NÚT XEM THÊM (Chỉ hiện khi chưa load hết từ vựng) */}
+          {visibleCount < filteredWords.length && (
+            <div className="pt-4 pb-8 flex justify-center">
+              <Button 
+                variant="outline" 
+                className="w-full md:w-auto border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground"
+                onClick={() => setVisibleCount(prev => prev + 50)}
+              >
+                Tải thêm 50 từ (Đang xem {visibleCount}/{filteredWords.length})
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
