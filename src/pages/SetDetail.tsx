@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, BookOpen, ListChecks, Download, Edit } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, BookOpen, ListChecks, Download, Edit, ChevronUp } from 'lucide-react';
 import ImportWords from '@/components/ImportWords';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +38,7 @@ export default function SetDetail() {
   const [newSetName, setNewSetName] = useState('');
   const [newSetDescription, setNewSetDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   
   // State quản lý số lượng từ hiển thị (Lazy load)
   const [visibleCount, setVisibleCount] = useState(50);
@@ -61,6 +62,16 @@ export default function SetDetail() {
   useEffect(() => {
     setVisibleCount(50);
   }, [searchTerm, showSelectedOnly]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   if (!set) return null;
 
@@ -213,6 +224,10 @@ export default function SetDetail() {
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleScrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -518,6 +533,18 @@ export default function SetDetail() {
             </div>
           )}
         </div>
+      )}
+
+      {showScrollTop && (
+        <Button
+          type="button"
+          size="icon"
+          onClick={handleScrollToTop}
+          className="fixed bottom-6 right-6 z-50 h-11 w-11 rounded-full bg-gradient-primary text-[#0F172A] shadow-lg hover:scale-105"
+          aria-label="Cuộn lên đầu trang"
+        >
+          <ChevronUp className="h-5 w-5" />
+        </Button>
       )}
     </div>
   );

@@ -90,10 +90,18 @@ export default function VocabSets() {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteSet(id);
-    const apiSets = await getSets();
-    setSets(apiSets);
-    toast.success('Đã xóa bộ từ vựng.');
+    const confirmed = window.confirm('Bạn có chắc muốn xóa bộ từ này không? Hành động này không thể hoàn tác.');
+    if (!confirmed) return;
+
+    try {
+      await deleteSet(id);
+      const apiSets = await getSets();
+      setSets(apiSets);
+      toast.success('Đã xóa bộ từ vựng.');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Không xóa được bộ từ vựng';
+      toast.error(message);
+    }
   };
 
   const handleSaveNewWordsPlan = async () => {
