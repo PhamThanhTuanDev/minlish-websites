@@ -6,7 +6,7 @@ import { LearningStats } from '@/lib/types';
 import { getReviewedWordsToday, getStats } from '@/lib/api';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { VocabularyWord } from '@/lib/types';
 
 function localYmd(d: Date): string {
@@ -95,6 +95,8 @@ const statCards = [
 export default function Dashboard() {
   const [stats, setStats] = useState<LearningStats | null>(null);
   const [reviewedTodayWords, setReviewedTodayWords] = useState<VocabularyWord[]>([]);
+  const [selectedReviewedIds, setSelectedReviewedIds] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
@@ -155,6 +157,41 @@ export default function Dashboard() {
     acc[setId].push(word);
     return acc;
   }, {});
+
+  const toggleReviewedWord = (wordId: string) => {
+    setSelectedReviewedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(wordId)) {
+        newSet.delete(wordId);
+      } else {
+        newSet.add(wordId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedReviewedIds.size === reviewedTodayWords.length) {
+      setSelectedReviewedIds(new Set());
+    } else {
+      setSelectedReviewedIds(new Set(reviewedTodayWords.map((w) => String(w.id))));
+    }
+  };
+
+  const handleRelearnSelected = () => {
+    if (selectedReviewedIds.size === 0) {
+      toast.error('Vui lòng chọn ít nhất 1 từ để ôn lại');
+      return;
+    }
+    // Lấy setId từ từ đầu tiên đã chọn (để navigate đến learn/:id)
+    const firstSelectedWord = reviewedTodayWords.find((w) => selectedReviewedIds.has(String(w.id)));
+    if (!firstSelectedWord?.setId) {
+      toast.error('Không tìm thấy bộ từ cho từ đã chọn');
+      return;
+    }
+    const selectedIds = Array.from(selectedReviewedIds).join(',');
+    navigate(`/learn/${firstSelectedWord.setId}?ids=${selectedIds}`);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
@@ -266,9 +303,16 @@ export default function Dashboard() {
               Hôm nay bạn đã học <strong>{reviewedTodayWords.length}</strong> từ.
             </p>
           </div>
-          <Button asChild variant="outline" className="border-accent/40 bg-accent/20 text-amber-800 hover:text-primary-foreground">
-            <Link to="/sets?tab=plan">Xem từ đến hạn</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {selectedReviewedIds.size > 0 && (
+              <Button variant="default" onClick={handleRelearnSelected} className="bg-primary text-primary-foreground">
+                Ôn lại {selectedReviewedIds.size} từ
+              </Button>
+            )}
+            <Button asChild variant="outline" className="border-accent/40 bg-accent/20 text-amber-800 hover:text-primary-foreground">
+              <Link to="/sets?tab=plan">Xem từ đến hạn</Link>
+            </Button>
+          </div>
         </div>
 
         {reviewedTodayWords.length === 0 ? (
@@ -297,6 +341,14 @@ export default function Dashboard() {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-muted/80">
                   <tr>
+                    <th className="px-3 py-2 text-left w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedReviewedIds.size === reviewedTodayWords.length && reviewedTodayWords.length > 0}
+                        onChange={handleSelectAll}
+                        className="h-4 w-4 cursor-pointer"
+                      />
+                    </th>
                     <th className="px-3 py-2 text-left">Từ</th>
                     <th className="px-3 py-2 text-left">Nghĩa</th>
                     <th className="px-3 py-2 text-left">Loại</th>
@@ -307,6 +359,14 @@ export default function Dashboard() {
                 <tbody>
                   {reviewedTodayWords.map((word) => (
                     <tr key={word.id} className="border-t border-border">
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedReviewedIds.has(String(word.id))}
+                          onChange={() => toggleReviewedWord(String(word.id))}
+                          className="h-4 w-4 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-3 py-2 font-medium">{word.word}</td>
                       <td className="px-3 py-2">{word.meaning}</td>
                       <td className="px-3 py-2">{word.type || '-'}</td>
@@ -330,16 +390,24 @@ export default function Dashboard() {
               {reviewedTodayWords.map((word) => (
                 <div key={`mobile-${word.id}`} className="rounded-xl border border-border bg-background p-3">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-foreground">{word.word}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{word.meaning}</p>
+                    <div className="flex gap-3 flex-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedReviewedIds.has(String(word.id))}
+                        onChange={() => toggleReviewedWord(String(word.id))}
+                        className="h-4 w-4 cursor-pointer mt-1 flex-shrink-0"
+                      />
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground">{word.word}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{word.meaning}</p>
+                      </div>
                     </div>
                     {word.setId ? (
-                      <Button asChild size="sm" variant="outline" className="border-accent/40 bg-accent/20 text-amber-800 hover:text-primary-foreground">
+                      <Button asChild size="sm" variant="outline" className="border-accent/40 bg-accent/20 text-amber-800 hover:text-primary-foreground flex-shrink-0">
                         <Link to={`/learn/${word.setId}?ids=${encodeURIComponent(word.id)}`}>Ôn lại</Link>
                       </Button>
                     ) : (
-                      <span className="text-xs text-muted-foreground">-</span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">-</span>
                     )}
                   </div>
                   <div className="mt-2 flex gap-2 text-xs">
