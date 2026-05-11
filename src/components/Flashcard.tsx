@@ -39,9 +39,43 @@ const renderHighlightedText = (text: string, term: string) => {
   );
 };
 
+const buildMeaningTerms = (meaning: string): string[] => {
+  const raw = meaning
+    .split(/[;,/]|\bor\b|\bhoặc\b/gi)
+    .map((part) => part.trim())
+    .filter((part) => part.length >= 2);
+
+  // Ưu tiên cụm dài trước để giảm việc match bị cắt nhỏ.
+  return Array.from(new Set(raw)).sort((a, b) => b.length - a.length);
+};
+
+const renderHighlightedByTerms = (text: string, terms: string[]) => {
+  const normalizedTerms = terms.filter((term) => term.trim().length > 0);
+  if (!text || normalizedTerms.length === 0) {
+    return text;
+  }
+
+  const pattern = normalizedTerms.map((term) => escapeRegExp(term)).join('|');
+  if (!pattern) {
+    return text;
+  }
+
+  const parts = text.split(new RegExp(`(${pattern})`, 'ig'));
+  return parts.map((part, index) =>
+    index % 2 === 1 ? (
+      <span key={`${part}-${index}`} className="font-semibold text-red-500">
+        {part}
+      </span>
+    ) : (
+      part
+    ),
+  );
+};
+
 export default function Flashcard({ word, onRate, current, total }: FlashcardProps) {
   const [flipped, setFlipped] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const meaningTerms = buildMeaningTerms(word.meaning || '');
 
   useEffect(() => {
     return () => {
@@ -83,28 +117,28 @@ export default function Flashcard({ word, onRate, current, total }: FlashcardPro
       </p>
 
       <div
-        className="perspective-1000 w-full max-w-lg cursor-pointer"
+        className="perspective-1000 w-full max-w-2xl cursor-pointer"
         style={{ perspective: '1000px' }}
         onClick={() => setFlipped(!flipped)}
       >
         <motion.div
-          className="relative h-72 w-full"
+          className="relative h-[68vh] min-h-[430px] max-h-[620px] w-full"
           style={{ transformStyle: 'preserve-3d' }}
           animate={{ rotateY: flipped ? 180 : 0 }}
           transition={{ duration: 0.5, type: 'spring', stiffness: 200, damping: 25 }}
         >
           {/* Front */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-border bg-card p-8 shadow-elevated"
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-border bg-card p-6 shadow-elevated md:p-8"
             style={{ backfaceVisibility: 'hidden' }}
           >
             <div className="mb-3 flex flex-wrap items-center justify-center gap-2 text-xs">
               {word.type && <span className="rounded-full bg-primary/10 px-2 py-1 font-medium text-primary">{word.type}</span>}
               {word.level && <span className="rounded-full bg-accent/15 px-2 py-1 font-medium text-amber-800">{word.level}</span>}
             </div>
-            <p className="mb-2 text-sm text-muted-foreground">{word.pronunciation}</p>
+            <p className="mb-2 max-w-full break-words text-sm text-muted-foreground">{word.pronunciation}</p>
             <div className="flex items-center gap-3">
-              <h2 className="font-heading text-4xl font-bold text-foreground">{word.word}</h2>
+              <h2 className="font-heading break-words text-center text-3xl font-bold text-foreground md:text-4xl">{word.word}</h2>
               <Button
                 type="button"
                 variant="ghost"
@@ -124,37 +158,44 @@ export default function Flashcard({ word, onRate, current, total }: FlashcardPro
 
           {/* Back */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl border border-border bg-card px-10 py-8 shadow-elevated"
+            className="absolute inset-0 rounded-2xl border border-border bg-card px-5 py-5 shadow-elevated md:px-10 md:py-8"
             style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
           >
-            <div className="flex flex-col items-center gap-2 text-center">
-              <h3 className="font-heading text-3xl font-bold tracking-tight text-primary">{word.meaning}</h3>
-            </div>
-            {(word.type || word.level) && (
-              <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs">
-                {word.type && <span className="rounded-full bg-primary/10 px-2 py-1 font-medium text-primary">{word.type}</span>}
-                {word.level && <span className="rounded-full bg-accent/15 px-2 py-1 font-medium text-amber-800">{word.level}</span>}
+            <div className="flex h-full flex-col overflow-hidden">
+              <div className="flex-shrink-0 text-center">
+                <h3 className="font-heading break-words text-3xl font-bold tracking-tight text-primary md:text-4xl">{word.meaning}</h3>
+                {(word.type || word.level) && (
+                  <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs">
+                    {word.type && <span className="rounded-full bg-primary/10 px-2 py-1 font-medium text-primary">{word.type}</span>}
+                    {word.level && <span className="rounded-full bg-accent/15 px-2 py-1 font-medium text-amber-800">{word.level}</span>}
+                  </div>
+                )}
               </div>
-            )}
-            {word.example && (
-              <p className="mt-8 text-sm italic leading-relaxed text-muted-foreground">
-                <span className="font-semibold not-italic">Example:</span>{' '}
-                "{renderHighlightedText(word.example, word.word)}"
-              </p>
-            )}
-            {word.exampleVi && (
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                <span className="font-semibold">Ví dụ VI:</span> {word.exampleVi}
-              </p>
-            )}
-            {word.collocation && (
-              <p className="mt-3 text-sm text-muted-foreground">
-                <span className="font-semibold">Collocation:</span> {word.collocation}
-              </p>
-            )}
-            <div className="mt-8 flex flex-col items-center gap-1.5 text-sm text-muted-foreground">
-              <span>Nhấn để lật</span>
-              <RotateCcw className="h-5 w-5 text-primary" />
+
+              <div className="mt-5 flex-1 overflow-y-auto pr-1 text-left">
+                {word.example && (
+                  <p className="text-sm italic leading-relaxed text-muted-foreground md:text-base">
+                    <span className="font-semibold not-italic">Example:</span>{' '}
+                    "{renderHighlightedText(word.example, word.word)}"
+                  </p>
+                )}
+                {word.exampleVi && (
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
+                    <span className="font-semibold">Ví dụ VI:</span>{' '}
+                    {renderHighlightedByTerms(word.exampleVi, meaningTerms)}
+                  </p>
+                )}
+                {word.collocation && (
+                  <p className="mt-3 text-sm text-muted-foreground md:text-base">
+                    <span className="font-semibold">Collocation:</span> {word.collocation}
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-3 flex flex-shrink-0 flex-col items-center gap-1.5 text-sm text-muted-foreground">
+                <span>Nhấn để lật</span>
+                <RotateCcw className="h-5 w-5 text-primary" />
+              </div>
             </div>
           </div>
         </motion.div>

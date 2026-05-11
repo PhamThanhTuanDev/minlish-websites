@@ -120,7 +120,10 @@ export default function Dashboard() {
     void getReviewedWordsToday()
       .then((words) => {
         if (!cancelled) {
-          setReviewedTodayWords(words);
+          const deduped = Array.from(
+            new Map(words.map((word) => [word.id, word])).values(),
+          );
+          setReviewedTodayWords(deduped);
         }
       })
       .catch(() => {
@@ -290,7 +293,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            <div className="max-h-80 overflow-auto rounded-xl border border-border">
+            <div className="max-h-80 overflow-auto rounded-xl border border-border hidden md:block">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-muted/80">
                   <tr>
@@ -321,6 +324,30 @@ export default function Dashboard() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            <div className="space-y-3 md:hidden">
+              {reviewedTodayWords.map((word) => (
+                <div key={`mobile-${word.id}`} className="rounded-xl border border-border bg-background p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-foreground">{word.word}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{word.meaning}</p>
+                    </div>
+                    {word.setId ? (
+                      <Button asChild size="sm" variant="outline" className="border-accent/40 bg-accent/20 text-amber-800 hover:text-primary-foreground">
+                        <Link to={`/learn/${word.setId}?ids=${encodeURIComponent(word.id)}`}>Ôn lại</Link>
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex gap-2 text-xs">
+                    <span className="rounded bg-primary/10 px-2 py-1 text-primary">{word.type || 'N/A'}</span>
+                    <span className="rounded bg-accent/15 px-2 py-1 text-amber-800">{word.level || 'N/A'}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
