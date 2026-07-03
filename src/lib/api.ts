@@ -1,14 +1,22 @@
-import { LearningStats, VocabularySet, VocabularyWord } from './types';
+import { LearningStats, VocabularySet, VocabularyWord } from "./types";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL ?? '';
+  import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL ?? "";
 
 // ============ Helper Functions ============
 
-const AUTH_STORAGE_KEYS = ['accessToken', 'authToken', 'userId', 'email', 'fullName'] as const;
+const AUTH_STORAGE_KEYS = [
+  "accessToken",
+  "authToken",
+  "userId",
+  "email",
+  "fullName",
+] as const;
 
 function getAccessToken(): string | null {
-  return localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+  return (
+    localStorage.getItem("accessToken") || localStorage.getItem("authToken")
+  );
 }
 
 function clearAuthSession(): void {
@@ -19,11 +27,11 @@ function clearAuthSession(): void {
 
 function buildJsonHeaders(initHeaders?: HeadersInit): Headers {
   const headers = new Headers(initHeaders);
-  headers.set('Content-Type', 'application/json');
+  headers.set("Content-Type", "application/json");
 
   const token = getAccessToken();
   if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
   return headers;
@@ -31,7 +39,7 @@ function buildJsonHeaders(initHeaders?: HeadersInit): Headers {
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const resp = await fetch(`${API_BASE_URL}${path}`, {
-    credentials: 'include',
+    credentials: "include",
     ...init,
     headers: buildJsonHeaders(init?.headers),
   });
@@ -40,17 +48,19 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
     const errorText = await resp.text();
     if (resp.status === 401 || resp.status === 403) {
       clearAuthSession();
-     // window.location.href = '/auth';
+      // window.location.href = '/auth';
     }
-    throw new Error(`API request failed ${resp.status} ${resp.statusText}: ${errorText}`);
+    throw new Error(
+      `API request failed ${resp.status} ${resp.statusText}: ${errorText}`,
+    );
   }
 
   if (resp.status === 204) {
     return undefined as T;
   }
 
-  const contentType = resp.headers.get('content-type') || '';
-  if (contentType.includes('application/json')) {
+  const contentType = resp.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
     return (await resp.json()) as T;
   }
 
@@ -60,16 +70,19 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
 function parseIsoSet(set: any): VocabularySet {
   const parsedTags = Array.isArray(set.tags)
     ? set.tags
-    : typeof set.tags === 'string'
-      ? set.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+    : typeof set.tags === "string"
+      ? set.tags
+          .split(",")
+          .map((t: string) => t.trim())
+          .filter(Boolean)
       : [];
 
   // Backend có thể trả ngày ở dạng chuỗi ISO hoặc timestamp; normalize ở đây để page không phải tự xử lý.
   return {
     ...set,
-    id: String(set.id ?? ''),
-    name: String(set.name ?? ''),
-    description: String(set.description ?? ''),
+    id: String(set.id ?? ""),
+    name: String(set.name ?? ""),
+    description: String(set.description ?? ""),
     tags: parsedTags,
     createdAt: new Date(set.createdAt ?? Date.now()),
     updatedAt: new Date(set.updatedAt ?? Date.now()),
@@ -84,19 +97,21 @@ function parseIsoWord(word: any): VocabularyWord {
 
   return {
     id: String(word.id ?? crypto.randomUUID()),
-    setId: String(word.vocabularySetId ?? word.setId ?? word.vocabularySet?.id ?? ''),
-    word: String(word.word ?? ''),
-    pronunciation: String(word.pronunciation ?? ''),
-    meaning: String(word.meaning ?? ''),
-    description: String(word.description ?? ''),
-    descriptionVi: String(word.descriptionVi ?? word.description_vi ?? ''),
-    example: String(word.example ?? word.exampleSentence ?? ''),
-    exampleVi: String(word.exampleVi ?? word.example_vi ?? ''),
-    collocation: String(word.collocation ?? word.fixedPhrase ?? ''),
-    relatedWords: String(word.relatedWords ?? ''),
-    note: String(word.note ?? word.notes ?? ''),
-    type: String(word.type ?? ''),
-    level: String(word.level ?? ''),
+    setId: String(
+      word.vocabularySetId ?? word.setId ?? word.vocabularySet?.id ?? "",
+    ),
+    word: String(word.word ?? ""),
+    pronunciation: String(word.pronunciation ?? ""),
+    meaning: String(word.meaning ?? ""),
+    description: String(word.description ?? ""),
+    descriptionVi: String(word.descriptionVi ?? word.description_vi ?? ""),
+    example: String(word.example ?? word.exampleSentence ?? ""),
+    exampleVi: String(word.exampleVi ?? word.example_vi ?? ""),
+    collocation: String(word.collocation ?? word.fixedPhrase ?? ""),
+    relatedWords: String(word.relatedWords ?? ""),
+    note: String(word.note ?? word.notes ?? ""),
+    type: String(word.type ?? ""),
+    level: String(word.level ?? ""),
     easeFactor: Number(word.easeFactor ?? 2.5),
     interval: Number(word.interval ?? 0),
     repetitions: Number(word.repetitions ?? 0),
@@ -110,8 +125,8 @@ function parseIsoWord(word: any): VocabularyWord {
 // ============ Auth API ============
 
 export async function forgotPassword(email: string): Promise<void> {
-  await fetchJson<void>('/api/auth/forgot-password', {
-    method: 'POST',
+  await fetchJson<void>("/api/auth/forgot-password", {
+    method: "POST",
     body: JSON.stringify({ email }),
   });
 }
@@ -145,31 +160,38 @@ export interface GoogleLoginRequest {
 }
 
 export async function login(credentials: LoginRequest): Promise<AuthResponse> {
-  return fetchJson<AuthResponse>('/api/auth/login', {
-    method: 'POST',
+  return fetchJson<AuthResponse>("/api/auth/login", {
+    method: "POST",
     body: JSON.stringify(credentials),
   });
 }
 
-export async function register(credentials: RegisterRequest): Promise<AuthResponse> {
-  return fetchJson<AuthResponse>('/api/auth/register', {
-    method: 'POST',
+export async function register(
+  credentials: RegisterRequest,
+): Promise<AuthResponse> {
+  return fetchJson<AuthResponse>("/api/auth/register", {
+    method: "POST",
     body: JSON.stringify(credentials),
   });
 }
 
-export async function googleLogin(payload: GoogleLoginRequest): Promise<AuthResponse> {
-  return fetchJson<AuthResponse>('/api/auth/google', {
-    method: 'POST',
+export async function googleLogin(
+  payload: GoogleLoginRequest,
+): Promise<AuthResponse> {
+  return fetchJson<AuthResponse>("/api/auth/google", {
+    method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
 // ============ User API ============
 
-export async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
-  await fetchJson<void>('/api/users/change-password', {
-    method: 'POST',
+export async function changePassword(
+  oldPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await fetchJson<void>("/api/users/change-password", {
+    method: "POST",
     body: JSON.stringify({ oldPassword, newPassword }),
   });
 }
@@ -186,27 +208,31 @@ export interface UserProfile {
 
 function mapUserProfile(raw: any): UserProfile {
   return {
-    userId: String(raw?.id ?? raw?.userId ?? ''),
-    email: String(raw?.email ?? ''),
-    fullName: String(raw?.fullName ?? ''),
-    learningGoal: raw?.learningGoal != null ? String(raw.learningGoal) : '',
-    level: raw?.level != null ? String(raw.level) : '',
+    userId: String(raw?.id ?? raw?.userId ?? ""),
+    email: String(raw?.email ?? ""),
+    fullName: String(raw?.fullName ?? ""),
+    learningGoal: raw?.learningGoal != null ? String(raw.learningGoal) : "",
+    level: raw?.level != null ? String(raw.level) : "",
   };
 }
 
 export async function getUserProfile(): Promise<UserProfile> {
-  const raw = await fetchJson<any>('/api/users/profile');
+  const raw = await fetchJson<any>("/api/users/profile");
   return mapUserProfile(raw);
 }
 
 export async function getUnreadNotificationCount(): Promise<number> {
-  const result = await fetchJson<number | string>('/api/notifications/unread-count');
+  const result = await fetchJson<number | string>(
+    "/api/notifications/unread-count",
+  );
   return Number(result ?? 0);
 }
 
-export async function updateUserProfile(profile: Partial<UserProfile>): Promise<UserProfile> {
-  const raw = await fetchJson<any>('/api/users/profile', {
-    method: 'PUT',
+export async function updateUserProfile(
+  profile: Partial<UserProfile>,
+): Promise<UserProfile> {
+  const raw = await fetchJson<any>("/api/users/profile", {
+    method: "PUT",
     body: JSON.stringify({
       fullName: profile.fullName,
       learningGoal: profile.learningGoal,
@@ -231,13 +257,15 @@ export async function getSet(id: string): Promise<VocabularySet | null> {
 }
 
 export async function saveSet(set: VocabularySet): Promise<VocabularySet> {
-  const hasId = String(set.id ?? '').trim().length > 0;
-  const method = hasId ? 'PUT' : 'POST';
-  const url = hasId ? `/api/sets/${encodeURIComponent(String(set.id))}` : '/api/sets';
+  const hasId = String(set.id ?? "").trim().length > 0;
+  const method = hasId ? "PUT" : "POST";
+  const url = hasId
+    ? `/api/sets/${encodeURIComponent(String(set.id))}`
+    : "/api/sets";
   const payload = {
     name: set.name,
     description: set.description,
-    tags: Array.isArray(set.tags) ? set.tags.join(',') : (set.tags ?? ''),
+    tags: Array.isArray(set.tags) ? set.tags.join(",") : (set.tags ?? ""),
   };
   const result = await fetchJson<any>(url, {
     method,
@@ -247,24 +275,31 @@ export async function saveSet(set: VocabularySet): Promise<VocabularySet> {
 }
 
 export async function deleteSet(id: string): Promise<void> {
-  await fetchJson<void>(`/api/sets/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  await fetchJson<void>(`/api/sets/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }
 
 export async function getSets(): Promise<VocabularySet[]> {
-  const results = await fetchJson<any[]>('/api/sets');
+  const results = await fetchJson<any[]>("/api/sets");
   const parsedSets = (Array.isArray(results) ? results : []).map(parseIsoSet);
   const setsWithWords = await Promise.all(
     parsedSets.map(async (set) => {
-      const words = await getVocabulariesInSet(String(set.id)).catch(() => [] as VocabularyWord[]);
+      const words = await getVocabulariesInSet(String(set.id)).catch(
+        () => [] as VocabularyWord[],
+      );
       return { ...set, words };
-    })
+    }),
   );
   return setsWithWords;
 }
 
 // ============ Vocabularies API ============
 
-export async function addVocabularyToSet(setId: string, word: VocabularyWord): Promise<VocabularyWord> {
+export async function addVocabularyToSet(
+  setId: string,
+  word: VocabularyWord,
+): Promise<VocabularyWord> {
   const payload = {
     word: word.word,
     pronunciation: word.pronunciation,
@@ -279,19 +314,29 @@ export async function addVocabularyToSet(setId: string, word: VocabularyWord): P
     type: word.type,
     level: word.level,
   };
-  const result = await fetchJson<any>(`/api/vocabularies/set/${encodeURIComponent(setId)}`, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  const result = await fetchJson<any>(
+    `/api/vocabularies/set/${encodeURIComponent(setId)}`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
   return parseIsoWord(result);
 }
 
-export async function getVocabulariesInSet(setId: string): Promise<VocabularyWord[]> {
-  const result = await fetchJson<any[]>(`/api/vocabularies/set/${encodeURIComponent(setId)}`);
+export async function getVocabulariesInSet(
+  setId: string,
+): Promise<VocabularyWord[]> {
+  const result = await fetchJson<any[]>(
+    `/api/vocabularies/set/${encodeURIComponent(setId)}`,
+  );
   return (Array.isArray(result) ? result : []).map(parseIsoWord);
 }
 
-export async function updateVocabulary(vocabId: string, updates: Partial<VocabularyWord>): Promise<VocabularyWord> {
+export async function updateVocabulary(
+  vocabId: string,
+  updates: Partial<VocabularyWord>,
+): Promise<VocabularyWord> {
   const payload = {
     word: updates.word,
     pronunciation: updates.pronunciation,
@@ -306,22 +351,30 @@ export async function updateVocabulary(vocabId: string, updates: Partial<Vocabul
     type: updates.type,
     level: updates.level,
   };
-  const result = await fetchJson<any>(`/api/vocabularies/${encodeURIComponent(vocabId)}`, {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  });
+  const result = await fetchJson<any>(
+    `/api/vocabularies/${encodeURIComponent(vocabId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    },
+  );
   return parseIsoWord(result);
 }
 
 export async function deleteVocabulary(vocabId: string): Promise<void> {
-  await fetchJson<void>(`/api/vocabularies/${encodeURIComponent(vocabId)}`, { method: 'DELETE' });
+  await fetchJson<void>(`/api/vocabularies/${encodeURIComponent(vocabId)}`, {
+    method: "DELETE",
+  });
 }
 
-export async function importVocabularies(setId: string, words: VocabularyWord[]): Promise<VocabularySet> {
+export async function importVocabularies(
+  setId: string,
+  words: VocabularyWord[],
+): Promise<VocabularySet> {
   await Promise.all(words.map((word) => addVocabularyToSet(setId, word)));
   const updated = await getSet(setId);
   if (!updated) {
-    throw new Error('Không thể tải lại bộ từ sau khi import');
+    throw new Error("Không thể tải lại bộ từ sau khi import");
   }
   return updated;
 }
@@ -330,7 +383,7 @@ export async function importVocabularies(setId: string, words: VocabularyWord[])
 
 export interface StudyRatingPayload {
   vocabularyId: string;
-  rating: 'again' | 'hard' | 'good' | 'easy';
+  rating: "again" | "hard" | "good" | "easy";
 }
 
 export interface StudySession {
@@ -340,13 +393,15 @@ export interface StudySession {
   timestamp: string;
 }
 
-function toBackendRating(r: StudyRatingPayload['rating']): string {
-  return r === 'again' ? 'repeat' : r;
+function toBackendRating(r: StudyRatingPayload["rating"]): string {
+  return r === "again" ? "repeat" : r;
 }
 
-export async function rateVocabulary(payload: StudyRatingPayload): Promise<void> {
-  await fetchJson<void>('/api/study/rate', {
-    method: 'POST',
+export async function rateVocabulary(
+  payload: StudyRatingPayload,
+): Promise<void> {
+  await fetchJson<void>("/api/study/rate", {
+    method: "POST",
     body: JSON.stringify({
       vocabularyId: Number(payload.vocabularyId),
       rating: toBackendRating(payload.rating),
@@ -355,16 +410,18 @@ export async function rateVocabulary(payload: StudyRatingPayload): Promise<void>
 }
 
 export async function getTodayStudySessions(): Promise<StudySession[]> {
-  return fetchJson<StudySession[]>('/api/study/today');
+  return fetchJson<StudySession[]>("/api/study/today");
 }
 
-export async function getReviewedWordsToday(setId?: string): Promise<VocabularyWord[]> {
+export async function getReviewedWordsToday(
+  setId?: string,
+): Promise<VocabularyWord[]> {
   const params = new URLSearchParams();
   if (setId) {
-    params.set('setId', setId);
+    params.set("setId", setId);
   }
   const query = params.toString();
-  const path = `/api/study/reviewed-today${query ? `?${query}` : ''}`;
+  const path = `/api/study/reviewed-today${query ? `?${query}` : ""}`;
   const result = await fetchJson<any[]>(path);
   return (Array.isArray(result) ? result : []).map(parseIsoWord);
 }
@@ -433,29 +490,38 @@ export interface DueReviewSet {
 }
 
 export async function getDailyStats(): Promise<DailyStats[]> {
-  const result = await fetchJson<any[]>('/api/stats/daily');
+  const result = await fetchJson<any[]>("/api/stats/daily");
   return (Array.isArray(result) ? result : []).map((item) => {
-    const rawDate = item.studyDate ?? item.date ?? '';
-    const normalized = typeof rawDate === 'string' ? rawDate.slice(0, 10) : String(rawDate);
-    const dailyRounds = Number(item.studySessions ?? item.count ?? item.sessionCount ?? 0);
+    const rawDate = item.studyDate ?? item.date ?? "";
+    const normalized =
+      typeof rawDate === "string" ? rawDate.slice(0, 10) : String(rawDate);
+    const dailyRounds = Number(
+      item.studySessions ?? item.count ?? item.sessionCount ?? 0,
+    );
     return {
       date: normalized,
       count: dailyRounds,
-      accuracy: typeof item.accuracy === 'number' ? item.accuracy : undefined,
+      accuracy: typeof item.accuracy === "number" ? item.accuracy : undefined,
       newWordsLearned: Number(item.newWordsLearned ?? 0),
       timeSpentSeconds: Number(item.timeSpentSeconds ?? 0),
-      retentionRate: typeof item.retentionRate === 'number' ? item.retentionRate : undefined,
+      retentionRate:
+        typeof item.retentionRate === "number" ? item.retentionRate : undefined,
       studySessions: Number(item.studySessions ?? dailyRounds),
     };
   });
 }
 
-export async function getRetentionRateByDay(startDate?: string, endDate?: string): Promise<RetentionRateData[]> {
+export async function getRetentionRateByDay(
+  startDate?: string,
+  endDate?: string,
+): Promise<RetentionRateData[]> {
   const params = new URLSearchParams();
-  if (startDate) params.append('start', startDate);
-  if (endDate) params.append('end', endDate);
+  if (startDate) params.append("start", startDate);
+  if (endDate) params.append("end", endDate);
   const queryStr = params.toString();
-  const result = await fetchJson<any[]>(`/api/stats/retention-rate/daily${queryStr ? '?' + queryStr : ''}`);
+  const result = await fetchJson<any[]>(
+    `/api/stats/retention-rate/daily${queryStr ? "?" + queryStr : ""}`,
+  );
   return (Array.isArray(result) ? result : []).map((item) => ({
     date: item.date,
     retentionRate: Number(item.retentionRate ?? 0),
@@ -464,12 +530,17 @@ export async function getRetentionRateByDay(startDate?: string, endDate?: string
   }));
 }
 
-export async function getRetentionRateByWeek(startDate?: string, endDate?: string): Promise<RetentionRateData[]> {
+export async function getRetentionRateByWeek(
+  startDate?: string,
+  endDate?: string,
+): Promise<RetentionRateData[]> {
   const params = new URLSearchParams();
-  if (startDate) params.append('start', startDate);
-  if (endDate) params.append('end', endDate);
+  if (startDate) params.append("start", startDate);
+  if (endDate) params.append("end", endDate);
   const queryStr = params.toString();
-  const result = await fetchJson<any[]>(`/api/stats/retention-rate/weekly${queryStr ? '?' + queryStr : ''}`);
+  const result = await fetchJson<any[]>(
+    `/api/stats/retention-rate/weekly${queryStr ? "?" + queryStr : ""}`,
+  );
   return (Array.isArray(result) ? result : []).map((item) => ({
     week: item.week,
     startDate: item.startDate,
@@ -480,12 +551,17 @@ export async function getRetentionRateByWeek(startDate?: string, endDate?: strin
   }));
 }
 
-export async function getRetentionRateByMonth(startDate?: string, endDate?: string): Promise<RetentionRateData[]> {
+export async function getRetentionRateByMonth(
+  startDate?: string,
+  endDate?: string,
+): Promise<RetentionRateData[]> {
   const params = new URLSearchParams();
-  if (startDate) params.append('start', startDate);
-  if (endDate) params.append('end', endDate);
+  if (startDate) params.append("start", startDate);
+  if (endDate) params.append("end", endDate);
   const queryStr = params.toString();
-  const result = await fetchJson<any[]>(`/api/stats/retention-rate/monthly${queryStr ? '?' + queryStr : ''}`);
+  const result = await fetchJson<any[]>(
+    `/api/stats/retention-rate/monthly${queryStr ? "?" + queryStr : ""}`,
+  );
   return (Array.isArray(result) ? result : []).map((item) => ({
     month: item.month,
     startDate: item.startDate,
@@ -497,7 +573,7 @@ export async function getRetentionRateByMonth(startDate?: string, endDate?: stri
 }
 
 export async function getSummaryStats(): Promise<SummaryStats> {
-  const result = await fetchJson<any>('/api/stats/summary');
+  const result = await fetchJson<any>("/api/stats/summary");
   return {
     totalWords: Number(result.totalWords ?? 0),
     totalStudyRounds: Number(result.totalStudyRounds ?? 0),
@@ -505,7 +581,8 @@ export async function getSummaryStats(): Promise<SummaryStats> {
     streakDays: Number(result.streakDays ?? result.streak ?? 0),
     accuracy: Number(result.accuracy ?? 0),
     retentionRate: Number(result.retentionRate ?? 0),
-    levelEstimate: result.levelEstimate != null ? String(result.levelEstimate) : undefined,
+    levelEstimate:
+      result.levelEstimate != null ? String(result.levelEstimate) : undefined,
     last30DaysTimeSpent: Number(result.last30DaysTimeSpent ?? 0),
     last30DaysNewWords: Number(result.last30DaysNewWords ?? 0),
     last30DaysStudyDays: Number(result.last30DaysStudyDays ?? 0),
@@ -515,7 +592,7 @@ export async function getSummaryStats(): Promise<SummaryStats> {
 }
 
 export async function getLearningPlan(): Promise<LearningPlan> {
-  const result = await fetchJson<any>('/api/learning-plan');
+  const result = await fetchJson<any>("/api/learning-plan");
   return {
     newWordsPerDay: Number(result?.newWordsPerDay ?? 10),
     todayNewWordsLearned: Number(result?.todayNewWordsLearned ?? 0),
@@ -527,8 +604,8 @@ export async function getLearningPlan(): Promise<LearningPlan> {
 export async function updateLearningPlan(payload: {
   newWordsPerDay?: number;
 }): Promise<LearningPlan> {
-  const result = await fetchJson<any>('/api/learning-plan', {
-    method: 'PUT',
+  const result = await fetchJson<any>("/api/learning-plan", {
+    method: "PUT",
     body: JSON.stringify(payload),
   });
 
@@ -541,18 +618,20 @@ export async function updateLearningPlan(payload: {
 }
 
 export async function getDueReviewSets(): Promise<DueReviewSet[]> {
-  const result = await fetchJson<any[]>('/api/stats/review-due-sets');
+  const result = await fetchJson<any[]>("/api/stats/review-due-sets");
   return (Array.isArray(result) ? result : []).map((set) => ({
     setId: Number(set?.setId ?? 0),
-    setName: String(set?.setName ?? ''),
+    setName: String(set?.setName ?? ""),
     totalDueWords: Number(set?.totalDueWords ?? 0),
     words: (Array.isArray(set?.words) ? set.words : []).map((word: any) => ({
       vocabularyId: Number(word?.vocabularyId ?? 0),
-      word: String(word?.word ?? ''),
+      word: String(word?.word ?? ""),
       type: word?.type != null ? String(word.type) : undefined,
       level: word?.level != null ? String(word.level) : undefined,
-      nextReviewDate: word?.nextReviewDate != null ? String(word.nextReviewDate) : undefined,
-      lastReviewDate: word?.lastReviewDate != null ? String(word.lastReviewDate) : undefined,
+      nextReviewDate:
+        word?.nextReviewDate != null ? String(word.nextReviewDate) : undefined,
+      lastReviewDate:
+        word?.lastReviewDate != null ? String(word.lastReviewDate) : undefined,
       overdueDays: Number(word?.overdueDays ?? 0),
     })),
   }));
@@ -560,20 +639,25 @@ export async function getDueReviewSets(): Promise<DueReviewSet[]> {
 
 export async function exportVocabularySet(setId: string): Promise<void> {
   const token = getAccessToken();
-  const resp = await fetch(`${API_BASE_URL}/api/vocabularies/export/${encodeURIComponent(setId)}`, {
-    method: 'GET',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    credentials: 'include',
-  });
+  const resp = await fetch(
+    `${API_BASE_URL}/api/vocabularies/export/${encodeURIComponent(setId)}`,
+    {
+      method: "GET",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+    },
+  );
 
   if (!resp.ok) {
     const errorText = await resp.text();
-    throw new Error(`API request failed ${resp.status} ${resp.statusText}: ${errorText}`);
+    throw new Error(
+      `API request failed ${resp.status} ${resp.statusText}: ${errorText}`,
+    );
   }
 
   const blob = await resp.blob();
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = `vocabulary-set-${setId}.csv`;
   document.body.appendChild(a);
@@ -603,7 +687,10 @@ export async function getStats(): Promise<LearningStats> {
   };
 }
 
-export async function recordStudySession(correct: number, total: number): Promise<LearningStats> {
+export async function recordStudySession(
+  correct: number,
+  total: number,
+): Promise<LearningStats> {
   const stats = await getStats();
   return stats;
 }
@@ -619,27 +706,29 @@ export interface Notification {
 }
 
 function normalizeServerDateTime(raw: unknown): string {
-  const value = String(raw ?? '').trim();
-  if (!value) return '';
+  const value = String(raw ?? "").trim();
+  if (!value) return "";
 
   // Backend often returns LocalDateTime without offset, treat it as UTC for stable cross-timezone rendering.
   const withZone = /[zZ]$|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`;
   const date = new Date(withZone);
-  return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
 }
 
 function mapApiNotification(n: any): Notification {
-  const rawMsg = String(n.message ?? n.content ?? '').trim();
-  const idx = rawMsg.indexOf('\n');
+  const rawMsg = String(n.message ?? n.content ?? "").trim();
+  const idx = rawMsg.indexOf("\n");
 
   // Ưu tiên tách tiêu đề/nội dung bằng xuống dòng; nếu không có, lấy câu đầu tiên làm tiêu đề để tránh hiển thị notificationType (vd: SESSION_SUMMARY).
-  const lineTitle = idx >= 0 ? rawMsg.slice(0, idx) : rawMsg.split('. ')[0];
+  const lineTitle = idx >= 0 ? rawMsg.slice(0, idx) : rawMsg.split(". ")[0];
   const lineContent = idx >= 0 ? rawMsg.slice(idx + 1) : rawMsg;
 
-  const title = (lineTitle || String(n.notificationType ?? n.title ?? 'Thông báo')).trim();
+  const title = (
+    lineTitle || String(n.notificationType ?? n.title ?? "Thông báo")
+  ).trim();
   const content = (lineContent || title).trim();
   return {
-    id: String(n.id ?? ''),
+    id: String(n.id ?? ""),
     title,
     content,
     isRead: Boolean(n.isRead ?? false),
@@ -648,39 +737,48 @@ function mapApiNotification(n: any): Notification {
 }
 
 export async function getUnreadNotifications(): Promise<Notification[]> {
-  const result = await fetchJson<any[]>('/api/notifications');
+  const result = await fetchJson<any[]>("/api/notifications");
   return (Array.isArray(result) ? result : []).map(mapApiNotification);
 }
 
 export async function getRecentNotifications(): Promise<Notification[]> {
-  const result = await fetchJson<any[]>('/api/notifications/recent');
+  const result = await fetchJson<any[]>("/api/notifications/recent");
   return (Array.isArray(result) ? result : []).map(mapApiNotification);
 }
 
-export async function markNotificationAsRead(notificationId: string): Promise<Notification> {
-  await fetchJson<void>(`/api/notifications/${encodeURIComponent(notificationId)}/read`, {
-    method: 'PUT',
-  });
+export async function markNotificationAsRead(
+  notificationId: string,
+): Promise<Notification> {
+  await fetchJson<void>(
+    `/api/notifications/${encodeURIComponent(notificationId)}/read`,
+    {
+      method: "PUT",
+    },
+  );
   return {
     id: notificationId,
-    title: '',
-    content: '',
+    title: "",
+    content: "",
     isRead: true,
-    createdAt: '',
+    createdAt: "",
   };
 }
 
-export async function createStudySummaryNotification(correct: number, total: number, timeSpentSeconds: number): Promise<Notification> {
-  const result = await fetchJson<any>('/api/notifications/session-summary', {
-    method: 'POST',
+export async function createStudySummaryNotification(
+  correct: number,
+  total: number,
+  timeSpentSeconds: number,
+): Promise<Notification> {
+  const result = await fetchJson<any>("/api/notifications/session-summary", {
+    method: "POST",
     body: JSON.stringify({ correct, total, timeSpentSeconds }),
   });
   return {
-    id: String(result?.id ?? ''),
-    title: String(result?.title ?? 'Hoan thanh phien hoc'),
-    content: String(result?.content ?? ''),
+    id: String(result?.id ?? ""),
+    title: String(result?.title ?? "Hoan thanh phien hoc"),
+    content: String(result?.content ?? ""),
     isRead: Boolean(result?.isRead ?? false),
-    createdAt: String(result?.createdAt ?? ''),
+    createdAt: String(result?.createdAt ?? ""),
   };
 }
 
@@ -692,35 +790,45 @@ export interface NotificationPreferences {
 }
 
 export async function getNotificationPreferences(): Promise<NotificationPreferences> {
-  return fetchJson<NotificationPreferences>('/api/notifications/preferences');
+  return fetchJson<NotificationPreferences>("/api/notifications/preferences");
 }
 
-export async function updateNotificationPreferences(prefs: NotificationPreferences): Promise<NotificationPreferences> {
-  return fetchJson<NotificationPreferences>('/api/notifications/preferences', {
-    method: 'PUT',
+export async function updateNotificationPreferences(
+  prefs: NotificationPreferences,
+): Promise<NotificationPreferences> {
+  return fetchJson<NotificationPreferences>("/api/notifications/preferences", {
+    method: "PUT",
     body: JSON.stringify(prefs),
   });
 }
 
 // ============ Helper Functions ============
 
-export async function getWordsForReview(setId: string): Promise<VocabularyWord[]> {
+export async function getWordsForReview(
+  setId: string,
+): Promise<VocabularyWord[]> {
   const set = await getSet(setId);
   if (!set) return [];
   const now = new Date();
-  return set.words.filter(w => w.nextReview <= now);
+  return set.words.filter((w) => w.nextReview <= now);
 }
 
 /**
  * Bulk add từ vào bộ từ mới (copy từ các ID đã chọn)
  */
-export async function addWordsToSet(setId: string, wordIds: string[]): Promise<void> {
+export async function addWordsToSet(
+  setId: string,
+  wordIds: string[],
+): Promise<void> {
   if (!wordIds || wordIds.length === 0) {
-    throw new Error('Danh sách từ không được trống');
+    throw new Error("Danh sách từ không được trống");
   }
-  
-  await fetchJson<void>(`/api/vocabularies/set/${encodeURIComponent(setId)}/add-words`, {
-    method: 'POST',
-    body: JSON.stringify({ wordIds: wordIds.map(id => Number(id)) }),
-  });
+
+  await fetchJson<void>(
+    `/api/vocabularies/set/${encodeURIComponent(setId)}/add-words`,
+    {
+      method: "POST",
+      body: JSON.stringify({ wordIds: wordIds.map((id) => Number(id)) }),
+    },
+  );
 }
