@@ -139,6 +139,10 @@ export default function VocabSets() {
     ? Math.min(100, Math.round((reviewedWordsToday / totalReviewWordsToday) * 100))
     : 0;
   const sortedDueSets = [...dueReviewSets].sort((a, b) => b.totalDueWords - a.totalDueWords);
+  const selectedDueSetId = searchParams.get('setId');
+  const visibleDueSets = selectedDueSetId
+    ? sortedDueSets.filter((set) => String(set.setId) === selectedDueSetId)
+    : sortedDueSets;
 
   const pageTitle = activeMenu === 'sets' ? 'Quản lý bộ từ vựng' : 'Kế hoạch học tập';
   const pageSubtitle = activeMenu === 'sets'
@@ -241,13 +245,15 @@ export default function VocabSets() {
 
           <div className="mt-6">
             <h3 className="mb-3 text-sm font-semibold text-foreground">Danh sách từ vựng đến hạn ôn</h3>
-            {sortedDueSets.length === 0 ? (
+            {visibleDueSets.length === 0 ? (
               <div className="rounded-xl bg-secondary p-4 text-sm text-muted-foreground">
                 Hôm nay chưa có từ nào đến hạn ôn.
               </div>
             ) : (
               <div className="space-y-3">
-                {sortedDueSets.map((set) => (
+                {visibleDueSets.map((set) => {
+                  const selectedIds = set.words.map((word) => encodeURIComponent(String(word.vocabularyId))).join(',');
+                  return (
                   <div key={set.setId} className="rounded-2xl border border-border bg-card p-5 shadow-card transition-all hover:border-primary/30 hover:shadow-elevated">
                     <div className="flex items-center justify-between gap-3">
                       <p className="font-heading text-base font-semibold text-foreground">{set.setName}</p>
@@ -291,19 +297,20 @@ export default function VocabSets() {
                       <span className="text-sm text-muted-foreground">Ưu tiên ôn trong hôm nay</span>
                       <div className="flex gap-2">
                         <Button asChild variant="outline" size="sm" className="border-accent/40 bg-accent/20 text-amber-800 hover:text-primary-foreground">
-                          <Link to={`/sets/${set.setId}`}>
+                          <Link to={`/sets?tab=plan&setId=${set.setId}`}>
                             <Eye className="mr-1 h-3 w-3" /> Chi tiết
                           </Link>
                         </Button>
                         <Button asChild size="sm" className="bg-gradient-primary text-[#0F172A]">
-                          <Link to={`/learn/${set.setId}`}>
+                          <Link to={`/learn/${set.setId}?ids=${selectedIds}`}>
                             <BookOpen className="mr-2 h-4 w-4" /> Học
                           </Link>
                         </Button>
                       </div>
                     </div>
                   </div>
-                ))}
+                );
+                })}
               </div>
             )}
           </div>
